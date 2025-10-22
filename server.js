@@ -12,8 +12,31 @@ const contactRoutes = require('./routes/contact');
 const userRoutes = require('./routes/user');
 const { supabase, connectSupabase } = require('./services/supabase');
 
-const CLIENT_ORIGIN = process.env.CLIENT_ORIGIN || 'https://book-astay.vercel.app';
-app.use(cors({ origin: CLIENT_ORIGIN, credentials: true }));
+// const CLIENT_ORIGIN = process.env.CLIENT_ORIGIN || 'https://book-astay.vercel.app';
+// app.use(cors({ origin: CLIENT_ORIGIN, credentials: true }));
+
+
+const allowedOrigins = [
+  // "https://omiiden-admin.vercel.app",
+  // "https://omiiden-admin-page.vercel.app",
+  // "https://omiiden.vercel.app",
+  "http://localhost:5173",
+  "https://book-astay.vercel.app"
+  
+];
+
+app.use(
+  cors({
+    origin: (origin, callback) => {
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error("Not allowed by CORS"));
+      }
+    },
+    credentials: true,
+  })
+);
 
 app.get('/', (req, res) => res.json({ status: 'ok' }));
 app.use('/api', bookingsRoutes);
