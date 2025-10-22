@@ -12,7 +12,7 @@ const contactRoutes = require('./routes/contact');
 const userRoutes = require('./routes/user');
 const { supabase, connectSupabase } = require('./services/supabase');
 
-const CLIENT_ORIGIN = process.env.CLIENT_ORIGIN || 'http://localhost:5173';
+const CLIENT_ORIGIN = process.env.CLIENT_ORIGIN || 'https://book-astay.vercel.app';
 app.use(cors({ origin: CLIENT_ORIGIN, credentials: true }));
 
 app.get('/', (req, res) => res.json({ status: 'ok' }));
