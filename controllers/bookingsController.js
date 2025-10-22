@@ -1,5 +1,5 @@
 const { v4: uuidv4 } = require('uuid');
-const cloudinary = require('../services/cloudinaryClient'); // <-- Cloudinary imported
+const cloudinary = require('../services/cloudinaryClient');
 const { supabaseAdmin } = require('../services/supabase');
 
 const CLEANING_FEE = 20000;
@@ -20,6 +20,85 @@ const calculateNights = (check_in, check_out) => {
   return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 };
 
+// --- Overlap helper ---
+// Returns { overlapping: boolean, blocking: booking | null }
+const checkRangeOverlap = async (room_type, check_in, check_out) => {
+  const requestedIn = parseDate(check_in);
+  const requestedOut = parseDate(check_out);
+  
+  if (!requestedIn || !requestedOut || requestedOut <= requestedIn) {
+    return { overlapping: true, blocking: null, message: 'Invalid date range' };
+  }
+
+  const inISO = requestedIn.toISOString();
+  const outISO = requestedOut.toISOString();
+
+  // If checking entire apartment: any overlapping booking blocks it
+  if ((room_type || '').toLowerCase() === 'entire') {
+    const { data, error } = await supabaseAdmin
+      .from('bookings')
+      .select('id, room_type, check_in, check_out, name')
+      .lt('check_in', outISO)
+      .gt('check_out', inISO)
+      .limit(1);
+
+    if (error) throw error;
+    
+    if (Array.isArray(data) && data.length > 0) {
+      const blocking = data[0];
+      return { 
+        overlapping: true, 
+        blocking,
+        message: `Entire apartment is booked from ${new Date(blocking.check_in).toLocaleDateString()} to ${new Date(blocking.check_out).toLocaleDateString()}`
+      };
+    }
+    return { overlapping: false, blocking: null };
+  }
+
+  // For an individual room:
+  // 1) Check if any overlapping 'entire' booking exists
+  const { data: entireData, error: entireErr } = await supabaseAdmin
+    .from('bookings')
+    .select('id, room_type, check_in, check_out, name')
+    .ilike('room_type', 'entire')
+    .lt('check_in', outISO)
+    .gt('check_out', inISO)
+    .limit(1);
+
+  if (entireErr) throw entireErr;
+  
+  if (Array.isArray(entireData) && entireData.length > 0) {
+    const blocking = entireData[0];
+    return { 
+      overlapping: true, 
+      blocking,
+      message: `Entire apartment is booked from ${new Date(blocking.check_in).toLocaleDateString()} to ${new Date(blocking.check_out).toLocaleDateString()}`
+    };
+  }
+
+  // 2) Check overlapping bookings for the same room_type
+  const { data, error } = await supabaseAdmin
+    .from('bookings')
+    .select('id, room_type, check_in, check_out, name')
+    .ilike('room_type', room_type)
+    .lt('check_in', outISO)
+    .gt('check_out', inISO)
+    .limit(1);
+
+  if (error) throw error;
+  
+  if (Array.isArray(data) && data.length > 0) {
+    const blocking = data[0];
+    return { 
+      overlapping: true, 
+      blocking,
+      message: `${room_type} is booked from ${new Date(blocking.check_in).toLocaleDateString()} to ${new Date(blocking.check_out).toLocaleDateString()}`
+    };
+  }
+
+  return { overlapping: false, blocking: null };
+};
+
 // --- Availability Check ---
 exports.getAvailability = async (req, res) => {
   try {
@@ -32,47 +111,25 @@ exports.getAvailability = async (req, res) => {
       });
     }
 
-    const { data, error } = await supabaseAdmin
-      .from('bookings')
-      .select('check_in, check_out')
-      .eq('room_type', room_type);
-
-    if (error) throw error;
-
-    const requestedIn = parseDate(check_in_date);
-    const requestedOut = parseDate(check_out_date);
-
-    const overlap = data.some((b) => {
-      const existingIn = parseDate(b.check_in);
-      const existingOut = parseDate(b.check_out);
-      return requestedIn < existingOut && requestedOut > existingIn;
-    });
-
-    res.status(200).json({ success: true, available: !overlap });
-  } catch (err) {
-    console.error('Error fetching availability:', err);
-    res.status(500).json({ success: false, message: 'Failed to fetch availability' });
-  }
-};
-
-// --- Fetch booked dates ---
-exports.getBookedDates = async (req, res) => {
-  try {
-    const { room_type } = req.query;
-    if (!room_type) {
-      return res.status(400).json({ success: false, message: 'Room type is required' });
+    const result = await checkRangeOverlap(room_type, check_in_date, check_out_date);
+    
+    if (result.message === 'Invalid date range') {
+      return res.status(400).json({ success: false, message: result.message });
     }
 
-    const { data, error } = await supabaseAdmin
-      .from('bookings')
-      .select('check_in, check_out')
-      .eq('room_type', room_type);
+    if (result.overlapping) {
+      return res.status(200).json({ 
+        success: true, 
+        available: false, 
+        blocking: result.blocking,
+        message: result.message
+      });
+    }
 
-    if (error) throw error;
-    res.status(200).json({ success: true, dates: data });
+    return res.status(200).json({ success: true, available: true });
   } catch (err) {
-    console.error('Error fetching booked dates:', err);
-    res.status(500).json({ success: false, message: 'Failed to fetch booked dates' });
+    console.error('Error fetching availability:', err);
+    res.status(500).json({ success: false, message: 'Failed to check availability' });
   }
 };
 
@@ -83,10 +140,8 @@ exports.uploadIdFile = async (req, res) => {
       return res.status(400).json({ success: false, message: 'No file uploaded' });
     }
 
-    // Support both memory (req.file.buffer) and disk path (req.file.path)
     let uploaded;
     if (req.file.buffer && typeof cloudinary.uploadBuffer === 'function') {
-      // cloudinary client exposes uploadBuffer(buffer, filename)
       uploaded = await cloudinary.uploadBuffer(req.file.buffer, req.file.originalname || `id_${Date.now()}`);
     } else if (req.file.path && cloudinary.uploader && typeof cloudinary.uploader.upload === 'function') {
       uploaded = await cloudinary.uploader.upload(req.file.path, {
@@ -120,11 +175,23 @@ exports.createBooking = async (req, res) => {
     } = req.body;
 
     if (!check_in_date || !check_out_date || !name || !email || !phone) {
-      return res.status(400).json({ success: false, message: 'Missing required booking fields' });
+      return res.status(400).json({ success: false, message: 'Missing required fields' });
     }
 
     if (!id_file_url) {
       return res.status(400).json({ success: false, message: 'ID file is required' });
+    }
+
+    // Check overlap BEFORE creating booking
+    const requestedRoom = room_type || 'entire';
+    const overlapCheck = await checkRangeOverlap(requestedRoom, check_in_date, check_out_date);
+    
+    if (overlapCheck.overlapping) {
+      return res.status(409).json({ 
+        success: false, 
+        message: overlapCheck.message || 'Selected dates are already booked',
+        blocking: overlapCheck.blocking
+      });
     }
 
     const nights = calculateNights(check_in_date, check_out_date);
@@ -149,6 +216,16 @@ exports.createBooking = async (req, res) => {
       status: 'booked',
     };
 
+    // Re-check immediately before insert to reduce race window
+    const finalCheck = await checkRangeOverlap(requestedRoom, check_in_date, check_out_date);
+    if (finalCheck.overlapping) {
+      return res.status(409).json({ 
+        success: false, 
+        message: finalCheck.message || 'Selected dates were just taken, please try another range',
+        blocking: finalCheck.blocking
+      });
+    }
+
     const { data, error } = await supabaseAdmin
       .from('bookings')
       .insert([bookingData])
@@ -167,7 +244,7 @@ exports.confirmBooking = async (req, res) => {
   try {
     const body = req.body || {};
 
-    // If an id file was sent as multipart/form-data, upload it and set id_file_url
+    // If an id file was sent as multipart/form-data, upload it
     if (req.file && !body.id_file_url) {
       try {
         let up;
@@ -191,18 +268,24 @@ exports.confirmBooking = async (req, res) => {
 
     // Paystack verification
     if (provider === 'paystack') {
-      // accept several possible keys from client
       const payment_reference =
         body.payment_reference ||
         body.transaction_ref ||
         body.reference ||
         body.tx_ref ||
         body.transaction_reference;
-      if (!payment_reference) return res.status(400).json({ success: false, error: 'Payment reference is required' });
-      if (!body.id_file_url) return res.status(400).json({ success: false, error: 'ID file is required' });
+        
+      if (!payment_reference) {
+        return res.status(400).json({ success: false, error: 'Payment reference is required' });
+      }
+      if (!body.id_file_url) {
+        return res.status(400).json({ success: false, error: 'ID file is required' });
+      }
 
       const secret = process.env.PAYSTACK_SECRET_KEY;
-      if (!secret) return res.status(500).json({ success: false, error: 'Paystack secret key missing' });
+      if (!secret) {
+        return res.status(500).json({ success: false, error: 'Paystack secret key missing' });
+      }
 
       const verifyUrl = `https://api.paystack.co/transaction/verify/${encodeURIComponent(payment_reference)}`;
       const resp = await _fetch(verifyUrl, {
@@ -216,6 +299,21 @@ exports.confirmBooking = async (req, res) => {
         return res.status(400).json({ success: false, error: 'Payment verification failed' });
       }
 
+      // Check availability before inserting confirmed paid booking
+      const requestedRoom = (body.room_type || 'entire');
+      const checkIn = body.check_in_date || body.check_in;
+      const checkOut = body.check_out_date || body.check_out;
+      
+      const overlapCheck = await checkRangeOverlap(requestedRoom, checkIn, checkOut);
+      if (overlapCheck.overlapping) {
+        return res.status(409).json({ 
+          success: false, 
+          error: overlapCheck.message || 'Selected dates are no longer available',
+          message: overlapCheck.message || 'Selected dates are no longer available',
+          blocking: overlapCheck.blocking
+        });
+      }
+
       const paidAmount = (json.data.amount || 0) / 100;
       const clientPrice = Number(body.price || 0);
 
@@ -223,8 +321,8 @@ exports.confirmBooking = async (req, res) => {
         user_id: body.user_id || fallbackUserId,
         room_type: body.room_type || 'entire',
         guests: body.guests || 1,
-        check_in: body.check_in_date || body.check_in,
-        check_out: body.check_out_date || body.check_out,
+        check_in: checkIn,
+        check_out: checkOut,
         name: body.name || 'Guest User',
         email: body.email || 'guest@example.com',
         phone: body.phone || null,
@@ -237,6 +335,17 @@ exports.confirmBooking = async (req, res) => {
         paid_amount: paidAmount,
         status: 'confirmed',
       };
+
+      // Final check just before insert to minimize race condition
+      const finalCheck = await checkRangeOverlap(requestedRoom, checkIn, checkOut);
+      if (finalCheck.overlapping) {
+        return res.status(409).json({ 
+          success: false, 
+          error: 'These dates were just booked by another guest. Please select different dates for a refund.',
+          message: 'These dates were just booked by another guest. Please contact support for a refund.',
+          blocking: finalCheck.blocking
+        });
+      }
 
       const { data, error } = await supabaseAdmin
         .from('bookings')
@@ -287,7 +396,11 @@ exports.getAllBookings = async (req, res) => {
 // --- List Booking Dates ---
 exports.listBookingDates = async (req, res) => {
   try {
-    const { data, error } = await supabaseAdmin.from('bookings').select('check_in, check_out');
+    const { data, error } = await supabaseAdmin
+      .from('bookings')
+      .select('check_in, check_out, room_type')
+      .in('status', ['confirmed', 'booked']);
+      
     if (error) throw error;
     res.status(200).json({ success: true, dates: data });
   } catch (err) {
