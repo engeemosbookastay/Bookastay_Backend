@@ -1,13 +1,15 @@
 const express = require('express');
 const router = express.Router();
-const adminAuth = require('../middleware/adminAuth');
-const controller = require('../controllers/adminController');
+const adminController = require('../controllers/adminController');
 
-router.use(adminAuth);
+// Admin authentication
+router.post('/admin/login', adminController.adminLogin);
+router.post('/admin/create', adminController.createAdmin); // One-time setup
 
-router.get('/bookings', controller.listBookings);
-router.get('/bookings/:id', controller.getBooking);
-router.patch('/bookings/:id/status', controller.updateBookingStatus);
-router.get('/stats', controller.stats);
+// Admin booking management
+router.post('/admin/block-date', adminController.blockDate);
+router.get('/admin/bookings', adminController.getAllBookingsAdmin);
+router.delete('/admin/bookings/:id', adminController.deleteBooking);
+router.get('/admin/available-dates', adminController.getAvailableDates);
 
 module.exports = router;

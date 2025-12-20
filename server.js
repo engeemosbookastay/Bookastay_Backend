@@ -21,7 +21,8 @@ const allowedOrigins = [
   // "https://omiiden-admin-page.vercel.app",
   // "https://omiiden.vercel.app",
   "http://localhost:5173",
-  "https://book-astay.vercel.app"
+  "https://book-astay.vercel.app",
+  "http://localhost:5175"
   
 ];
 
@@ -40,7 +41,7 @@ app.use(
 
 app.get('/', (req, res) => res.json({ status: 'ok' }));
 app.use('/api', bookingsRoutes);
-app.use('/admin', adminRoutes);
+app.use('/api', adminRoutes);
 app.use('/api/contact', contactRoutes);
 app.use('/auth', userRoutes);
 
