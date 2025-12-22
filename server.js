@@ -22,7 +22,7 @@ const allowedOrigins = [
   // "https://omiiden.vercel.app",
   "http://localhost:5176",
   "https://book-astay.vercel.app",
-  "https://booka-stay.vercel.app/",
+  "https://booka-stay.vercel.app",
   "http://localhost:5175"
   
 ];
