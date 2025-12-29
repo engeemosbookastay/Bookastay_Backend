@@ -5,6 +5,9 @@ import { supabaseAdmin } from '../services/supabase.js';
 const CLEANING_FEE = 20000;
 const SERVICE_FEE = 25000;
 const EXTRA_GUEST_PER_NIGHT = 5000;
+const PRICE_ENTIRE_APARTMENT = 100000;
+const PRICE_SINGLE_ROOM = 60000;
+const MIN_NIGHTS_SINGLE_ROOM = 2;
 
 // --- Utilities ---
 const parseDate = (dateString) => {
@@ -182,8 +185,19 @@ export const createBooking = async (req, res) => {
       return res.status(400).json({ success: false, message: 'ID file is required' });
     }
 
-    // Check overlap BEFORE creating booking
+    // Calculate nights first
+    const nights = calculateNights(check_in_date, check_out_date);
+
+    // Check minimum nights for single rooms
     const requestedRoom = room_type || 'entire';
+    if (requestedRoom.toLowerCase() !== 'entire' && nights < MIN_NIGHTS_SINGLE_ROOM) {
+      return res.status(400).json({
+        success: false,
+        message: `Single room bookings require a minimum of ${MIN_NIGHTS_SINGLE_ROOM} nights. You selected ${nights} night(s).`
+      });
+    }
+
+    // Check overlap BEFORE creating booking
     const overlapCheck = await checkRangeOverlap(requestedRoom, check_in_date, check_out_date);
     
     if (overlapCheck.overlapping) {
@@ -194,8 +208,8 @@ export const createBooking = async (req, res) => {
       });
     }
 
-    const nights = calculateNights(check_in_date, check_out_date);
-    const base_price = 50000;
+    // Determine base price based on room type
+    const base_price = requestedRoom.toLowerCase() === 'entire' ? PRICE_ENTIRE_APARTMENT : PRICE_SINGLE_ROOM;
     const extraGuestFee = guests > 2 ? (guests - 2) * EXTRA_GUEST_PER_NIGHT * nights : 0;
     const total = base_price * nights + CLEANING_FEE + SERVICE_FEE + extraGuestFee;
 
