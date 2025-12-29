@@ -1,12 +1,12 @@
-const { supabase, supabaseAdmin } = require("../services/supabase");
-const bcrypt = require("bcryptjs");
+import { supabase, supabaseAdmin } from "../services/supabase.js";
+import bcrypt from "bcryptjs";
 
 const dbClient = supabaseAdmin || supabase;
 
 // ======================
 // Email/Password Signup
 // ======================
-const signup = async (req, res) => {
+export const signup = async (req, res) => {
   const { name, email, password } = req.body || {};
   if (!email || !password || !name)
     return res.status(400).json({ error: "name, email, and password are required" });
@@ -52,7 +52,7 @@ const signup = async (req, res) => {
 // ======================
 // Email/Password Login
 // ======================
-const login = async (req, res) => {
+export const login = async (req, res) => {
   const { email, password } = req.body || {};
   if (!email || !password)
     return res.status(400).json({ error: "email and password are required" });
@@ -92,7 +92,7 @@ const login = async (req, res) => {
 // ======================
 // Social Login
 // ======================
-const socialLogin = async (req, res) => {
+export const socialLogin = async (req, res) => {
   const { provider, redirectUrl } = req.body || {};
   if (!provider)
     return res.status(400).json({ error: "provider is required" });
@@ -116,7 +116,7 @@ const socialLogin = async (req, res) => {
 // ======================
 // OAuth Callback
 // ======================
-const socialCallback = async (req, res) => {
+export const socialCallback = async (req, res) => {
   const { access_token } = req.query;
   if (!access_token)
     return res.status(400).json({ error: "access_token missing" });
@@ -147,5 +147,3 @@ const socialCallback = async (req, res) => {
     return res.status(500).json({ error: "Internal server error" });
   }
 };
-
-module.exports = { signup, login, socialLogin, socialCallback };

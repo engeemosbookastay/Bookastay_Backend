@@ -1,20 +1,31 @@
-require('dotenv').config();
-const express = require('express');
-const cors = require('cors');
-const cookieParser = require('cookie-parser');
-const bookingsRoutes = require('./routes/bookings');
-const adminRoutes = require('./routes/admin');
+import dotenv from 'dotenv';
+import express from 'express';
+import cors from 'cors';
+import cookieParser from 'cookie-parser';
+import bookingsRoutes from './routes/bookings.js';
+import adminRoutes from './routes/admin.js';
+import cron from 'node-cron';
+import { syncFromAirbnb } from './services/airbnbSync.js';
+import contactRoutes from './routes/contact.js';
+import userRoutes from './routes/user.js';
+import calendarRoutes from './routes/calendar.js';
+import { supabase, connectSupabase } from './services/supabase.js';
+
+dotenv.config();
 
 const app = express();
 app.use(express.json());
 app.use(cookieParser());
-const contactRoutes = require('./routes/contact');
-const userRoutes = require('./routes/user');
-const { supabase, connectSupabase } = require('./services/supabase');
 
 // const CLIENT_ORIGIN = process.env.CLIENT_ORIGIN || 'https://book-astay.vercel.app';
 // app.use(cors({ origin: CLIENT_ORIGIN, credentials: true }));
 
+
+// Run every 10 minutes
+cron.schedule('*/10 * * * *', () => {
+  console.log('Running Airbnb calendar sync...');
+  syncFromAirbnb();
+});
 
 const allowedOrigins = [
   // "https://omiiden-admin.vercel.app",
@@ -45,6 +56,7 @@ app.use('/api', bookingsRoutes);
 app.use('/api', adminRoutes);
 app.use('/api/contact', contactRoutes);
 app.use('/auth', userRoutes);
+app.use('/api/calendar', calendarRoutes);
 
 const port = process.env.PORT || 4000;
 
@@ -65,4 +77,4 @@ async function start() {
 
 start();
 
-module.exports = app;
+export default app;

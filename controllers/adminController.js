@@ -1,14 +1,13 @@
-  const { supabaseAdmin } = require('../services/supabase');
-  const bcrypt = require('bcryptjs');
-  const ADMIN = '00000000-0000-0000-0000-000000000000';
+import { supabaseAdmin } from '../services/supabase.js';
+import bcrypt from 'bcryptjs';
+import { checkRangeOverlap } from './bookingsController.js';
 
-  // Import overlap checker (must be properly exported from bookingsController)
-  const { checkRangeOverlap } = require('./bookingsController');
+const ADMIN = '00000000-0000-0000-0000-000000000000';
 
-  // ======================
-  // ADMIN LOGIN
-  // ======================
-  exports.adminLogin = async (req, res) => {
+// ======================
+// ADMIN LOGIN
+// ======================
+export const adminLogin = async (req, res) => {
     try {
       const { email, password } = req.body;
 
@@ -57,10 +56,10 @@
     }
   };
 
-  // ======================
-  // CREATE ADMIN (One-time setup)
-  // ======================
-  exports.createAdmin = async (req, res) => {
+// ======================
+// CREATE ADMIN (One-time setup)
+// ======================
+export const createAdmin = async (req, res) => {
     try {
       const { email, password, name } = req.body;
 
@@ -111,10 +110,10 @@
     }
   };
 
-  // ======================
-  // BLOCK DATE (ADMIN)
-  // ======================
-  exports.blockDate = async (req, res) => {
+// ======================
+// BLOCK DATE (ADMIN)
+// ======================
+export const blockDate = async (req, res) => {
     try {
       const { room_type, check_in_date, check_out_date, reason } = req.body;
 
@@ -182,10 +181,10 @@
     }
   };
 
-  // ======================
-  // GET ALL BOOKINGS (ADMIN)
-  // ======================
-  exports.getAllBookingsAdmin = async (req, res) => {
+// ======================
+// GET ALL BOOKINGS (ADMIN)
+// ======================
+export const getAllBookingsAdmin = async (req, res) => {
     try {
       const { data, error } = await supabaseAdmin
         .from('bookings')
@@ -214,10 +213,10 @@
     }
   };
 
-  // ======================
-  // DELETE / UNBLOCK DATE
-  // ======================
-  exports.deleteBooking = async (req, res) => {
+// ======================
+// DELETE / UNBLOCK DATE
+// ======================
+export const deleteBooking = async (req, res) => {
     try {
       const { id } = req.params;
 
@@ -261,10 +260,10 @@
     }
   };
 
-  // ======================
-  // GET BOOKED / BLOCKED DATES (ADMIN UI)
-  // ======================
-  exports.getAvailableDates = async (req, res) => {
+// ======================
+// GET BOOKED / BLOCKED DATES (ADMIN UI)
+// ======================
+export const getAvailableDates = async (req, res) => {
     try {
       const { data, error } = await supabaseAdmin
         .from('bookings')

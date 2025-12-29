@@ -1,6 +1,6 @@
-const { v4: uuidv4 } = require('uuid');
-const cloudinary = require('../services/cloudinaryClient');
-const { supabaseAdmin } = require('../services/supabase');
+import { v4 as uuidv4 } from 'uuid';
+import cloudinary from '../services/cloudinaryClient.js';
+import { supabaseAdmin } from '../services/supabase.js';
 
 const CLEANING_FEE = 20000;
 const SERVICE_FEE = 25000;
@@ -100,7 +100,7 @@ const checkRangeOverlap = async (room_type, check_in, check_out) => {
 };
 
 // --- Availability Check ---
-exports.getAvailability = async (req, res) => {
+export const getAvailability = async (req, res) => {
   try {
     const { room_type, check_in_date, check_out_date } = req.query;
 
@@ -134,7 +134,7 @@ exports.getAvailability = async (req, res) => {
 };
 
 // --- Upload ID File ---
-exports.uploadIdFile = async (req, res) => {
+export const uploadIdFile = async (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({ success: false, message: 'No file uploaded' });
@@ -159,7 +159,7 @@ exports.uploadIdFile = async (req, res) => {
 };
 
 // --- Create Booking ---
-exports.createBooking = async (req, res) => {
+export const createBooking = async (req, res) => {
   try {
     const {
       user_id,
@@ -240,7 +240,7 @@ exports.createBooking = async (req, res) => {
 };
 
 // --- Confirm Booking (Paystack or existing transaction) ---
-exports.confirmBooking = async (req, res) => {
+export const confirmBooking = async (req, res) => {
   try {
     const body = req.body || {};
 
@@ -262,7 +262,10 @@ exports.confirmBooking = async (req, res) => {
 
     const provider = (body.provider || '').toLowerCase();
     let _fetch = global.fetch;
-    if (typeof _fetch !== 'function') _fetch = require('node-fetch');
+    if (typeof _fetch !== 'function') {
+      const nodeFetch = await import('node-fetch');
+      _fetch = nodeFetch.default;
+    }
 
     const fallbackUserId = process.env.GUEST_USER_ID || uuidv4();
 
@@ -379,7 +382,7 @@ exports.confirmBooking = async (req, res) => {
 };
 
 // --- Get All Bookings ---
-exports.getAllBookings = async (req, res) => {
+export const getAllBookings = async (req, res) => {
   try {
     const { data, error } = await supabaseAdmin
       .from('bookings')
@@ -394,7 +397,7 @@ exports.getAllBookings = async (req, res) => {
 };
 
 // --- List Booking Dates ---
-exports.listBookingDates = async (req, res) => {
+export const listBookingDates = async (req, res) => {
   try {
     const { data, error } = await supabaseAdmin
       .from('bookings')
@@ -410,7 +413,7 @@ exports.listBookingDates = async (req, res) => {
 };
 
 // --- Get Booking by ID ---
-exports.getBooking = async (req, res) => {
+export const getBooking = async (req, res) => {
   try {
     const id = req.params.id;
     if (!id) return res.status(400).json({ success: false, message: 'Booking ID required' });
@@ -427,7 +430,7 @@ exports.getBooking = async (req, res) => {
 };
 
 // --- Simulate Payment ---
-exports.simulatePayment = async (req, res) => {
+export const simulatePayment = async (req, res) => {
   try {
     const { bookingId, amount } = req.body;
     if (!bookingId) return res.status(400).json({ success: false, message: 'bookingId required' });
@@ -448,5 +451,4 @@ exports.simulatePayment = async (req, res) => {
   }
 };
 
-
-exports.checkRangeOverlap = checkRangeOverlap;
+export { checkRangeOverlap };

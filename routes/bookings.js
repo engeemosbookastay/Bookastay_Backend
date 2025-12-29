@@ -1,11 +1,11 @@
-const express = require('express');
+import express from 'express';
+import multer from 'multer';
+import * as controller from '../controllers/bookingsController.js';
+
 const router = express.Router();
-const multer = require('multer');
 
 // Use memory storage so req.file.buffer is available (also works with disk path if other middleware uses disk)
 const upload = multer({ storage: multer.memoryStorage() });
-
-const controller = require('../controllers/bookingsController');
 
 // Order matters – put more specific routes first
 router.get('/bookings/dates', controller.listBookingDates);
@@ -22,4 +22,4 @@ router.post('/bookings/confirm', upload.single('id_file'), controller.confirmBoo
 
 router.get('/bookings/:id', controller.getBooking);
 
-module.exports = router;
+export default router;

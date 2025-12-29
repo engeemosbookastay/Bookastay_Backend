@@ -1,6 +1,7 @@
-const express = require('express');
+import express from 'express';
+import * as adminController from '../controllers/adminController.js';
+
 const router = express.Router();
-const adminController = require('../controllers/adminController');
 
 // Admin authentication
 router.post('/admin/login', adminController.adminLogin);
@@ -12,4 +13,4 @@ router.get('/admin/bookings', adminController.getAllBookingsAdmin);
 router.delete('/admin/bookings/:id', adminController.deleteBooking);
 router.get('/admin/available-dates', adminController.getAvailableDates);
 
-module.exports = router;
+export default router;

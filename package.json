@@ -1,6 +1,7 @@
 {
   "name": "bookastay-backend",
   "version": "1.0.0",
+  "type": "module",
   "scripts": {
     "start": "node server.js",
     "dev": "node --watch server.js"
@@ -8,17 +9,21 @@
   "dependencies": {
     "@supabase/supabase-js": "^2.74.0",
     "@tailwindcss/vite": "^4.1.14",
+    "axios": "^1.13.2",
     "bcryptjs": "^2.4.3",
     "cloudinary": "^2.7.0",
     "cookie-parser": "^1.4.6",
     "cors": "^2.8.5",
     "dotenv": "^17.2.3",
     "express": "^5.1.0",
+    "ics": "^3.8.1",
     "lucide-react": "^0.544.0",
     "mongoose": "^8.19.1",
     "morgan": "^1.10.1",
     "multer": "^2.0.2",
+    "node-cron": "^4.2.1",
     "node-fetch": "^2.7.0",
+    "node-ical": "^0.22.1",
     "react-router-dom": "^7.9.3",
     "tailwindcss": "^4.1.14",
     "uuid": "^13.0.0"

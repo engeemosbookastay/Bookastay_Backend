@@ -1,5 +1,5 @@
-const dotenv = require('dotenv');
-const { createClient } = require('@supabase/supabase-js');
+import dotenv from 'dotenv';
+import { createClient } from '@supabase/supabase-js';
 
 dotenv.config();
 
@@ -55,4 +55,4 @@ const connectSupabase = async () => {
   }
 };
 
-module.exports = { supabase, supabaseAdmin, connectSupabase };
+export { supabase, supabaseAdmin, connectSupabase };

@@ -1,6 +1,6 @@
-const { supabase } = require('../services/supabase');
+import { supabase } from '../services/supabase.js';
 
-const createContact = async (req, res) => {
+export const createContact = async (req, res) => {
   const { name, email, phone, subject, message } = req.body;
   if (!name || !email || !subject || !message) {
     return res.status(400).json({ error: 'Missing required fields: name, email, subject, message' });
@@ -22,5 +22,3 @@ const createContact = async (req, res) => {
     return res.status(500).json({ error: 'Server error' });
   }
 };
-
-module.exports = { createContact };
