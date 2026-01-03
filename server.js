@@ -28,13 +28,10 @@ cron.schedule('*/10 * * * *', () => {
 });
 
 const allowedOrigins = [
-  // "https://omiiden-admin.vercel.app",
-  // "https://omiiden-admin-page.vercel.app",
-  // "https://omiiden.vercel.app",
-  "http://localhost:5176",
+  "http://localhost:5174",
   "https://book-astay.vercel.app",
   "https://booka-stay.vercel.app",
-  "http://localhost:5175"
+  "http://localhost:5173"
   
 ];
 
