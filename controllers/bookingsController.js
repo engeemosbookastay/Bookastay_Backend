@@ -1,6 +1,10 @@
 import { v4 as uuidv4 } from 'uuid';
-import cloudinary from '../services/cloudinaryClient.js';
+// import cloudinary from '../services/cloudinaryClient.js';
 import { supabaseAdmin } from '../services/supabase.js';
+// import cloudinary from '../services/cloudinaryClient.js';
+
+import cloudinary, { uploadBuffer } from '../services/cloudinaryClient.js';
+
 
 const CLEANING_FEE = 20000;
 const SERVICE_FEE = 25000;
@@ -24,7 +28,6 @@ const calculateNights = (check_in, check_out) => {
 };
 
 // --- Overlap helper ---
-// Returns { overlapping: boolean, blocking: booking | null }
 const checkRangeOverlap = async (room_type, check_in, check_out) => {
   const requestedIn = parseDate(check_in);
   const requestedOut = parseDate(check_out);
@@ -36,7 +39,6 @@ const checkRangeOverlap = async (room_type, check_in, check_out) => {
   const inISO = requestedIn.toISOString();
   const outISO = requestedOut.toISOString();
 
-  // If checking entire apartment: any overlapping booking blocks it
   if ((room_type || '').toLowerCase() === 'entire') {
     const { data, error } = await supabaseAdmin
       .from('bookings')
@@ -58,8 +60,6 @@ const checkRangeOverlap = async (room_type, check_in, check_out) => {
     return { overlapping: false, blocking: null };
   }
 
-  // For an individual room:
-  // 1) Check if any overlapping 'entire' booking exists
   const { data: entireData, error: entireErr } = await supabaseAdmin
     .from('bookings')
     .select('id, room_type, check_in, check_out, name')
@@ -79,7 +79,6 @@ const checkRangeOverlap = async (room_type, check_in, check_out) => {
     };
   }
 
-  // 2) Check overlapping bookings for the same room_type
   const { data, error } = await supabaseAdmin
     .from('bookings')
     .select('id, room_type, check_in, check_out, name')
@@ -136,32 +135,66 @@ export const getAvailability = async (req, res) => {
   }
 };
 
-// --- Upload ID File ---
+
+
+
+
+
 export const uploadIdFile = async (req, res) => {
   try {
+    console.log('Upload ID endpoint hit');
+    console.log('req.file exists:', !!req.file);
+
     if (!req.file) {
+      console.log('No file in request');
       return res.status(400).json({ success: false, message: 'No file uploaded' });
     }
 
-    let uploaded;
-    if (req.file.buffer && typeof cloudinary.uploadBuffer === 'function') {
-      uploaded = await cloudinary.uploadBuffer(req.file.buffer, req.file.originalname || `id_${Date.now()}`);
-    } else if (req.file.path && cloudinary.uploader && typeof cloudinary.uploader.upload === 'function') {
-      uploaded = await cloudinary.uploader.upload(req.file.path, {
-        folder: 'bookings/ids',
+    console.log('File details:', {
+      originalname: req.file.originalname,
+      mimetype: req.file.mimetype,
+      size: req.file.size,
+      hasBuffer: !!req.file.buffer
+    });
+
+    if (!req.file.buffer) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'File buffer not available' 
       });
-    } else {
-      return res.status(400).json({ success: false, message: 'Unsupported file upload' });
     }
 
-    res.status(200).json({ success: true, url: uploaded.secure_url || uploaded.url || uploaded.secureUrl });
+    console.log('Uploading to Cloudinary...');
+    // Use uploadBuffer directly (not cloudinary.uploadBuffer)
+    const uploaded = await uploadBuffer(req.file.buffer, req.file.originalname);
+    
+    console.log('Upload successful:', uploaded.secure_url);
+
+    const url = uploaded.secure_url || uploaded.url;
+    
+    if (!url) {
+      console.error('Upload succeeded but no URL returned');
+      return res.status(500).json({ 
+        success: false, 
+        message: 'Upload completed but URL not generated' 
+      });
+    }
+
+    res.status(200).json({ success: true, url });
+
   } catch (err) {
     console.error('Error uploading ID file:', err);
-    res.status(500).json({ success: false, message: 'Failed to upload ID file' });
+    console.error('Error stack:', err.stack);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Failed to upload ID file: ' + err.message 
+    });
   }
 };
-
 // --- Create Booking ---
+// NOTE: This function is NOT used in the current booking flow
+// The frontend goes directly to confirmBooking after payment
+// Keeping this for backwards compatibility or alternative booking flows
 export const createBooking = async (req, res) => {
   try {
     const {
@@ -181,15 +214,13 @@ export const createBooking = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Missing required fields' });
     }
 
-    if (!id_file_url) {
-      return res.status(400).json({ success: false, message: 'ID file is required' });
-    }
+    // REMOVED: ID file validation
+    // ID file is now validated and uploaded in confirmBooking (after payment)
+    // This allows the booking flow to proceed to payment before ID upload
 
-    // Calculate nights first
     const nights = calculateNights(check_in_date, check_out_date);
-
-    // Check minimum nights for single rooms
     const requestedRoom = room_type || 'entire';
+    
     if (requestedRoom.toLowerCase() !== 'entire' && nights < MIN_NIGHTS_SINGLE_ROOM) {
       return res.status(400).json({
         success: false,
@@ -197,7 +228,6 @@ export const createBooking = async (req, res) => {
       });
     }
 
-    // Check overlap BEFORE creating booking
     const overlapCheck = await checkRangeOverlap(requestedRoom, check_in_date, check_out_date);
     
     if (overlapCheck.overlapping) {
@@ -208,7 +238,6 @@ export const createBooking = async (req, res) => {
       });
     }
 
-    // Determine base price based on room type
     const base_price = requestedRoom.toLowerCase() === 'entire' ? PRICE_ENTIRE_APARTMENT : PRICE_SINGLE_ROOM;
     const extraGuestFee = guests > 2 ? (guests - 2) * EXTRA_GUEST_PER_NIGHT * nights : 0;
     const total = base_price * nights + CLEANING_FEE + SERVICE_FEE + extraGuestFee;
@@ -222,15 +251,14 @@ export const createBooking = async (req, res) => {
       name,
       email,
       phone,
-      id_type,
-      id_file_url,
+      id_type: id_type || null,
+      id_file_url: id_file_url || null,
       price: total,
       payment_status: 'pending',
       transaction_ref: uuidv4(),
       status: 'booked',
     };
 
-    // Re-check immediately before insert to reduce race window
     const finalCheck = await checkRangeOverlap(requestedRoom, check_in_date, check_out_date);
     if (finalCheck.overlapping) {
       return res.status(409).json({ 
@@ -258,7 +286,7 @@ export const confirmBooking = async (req, res) => {
   try {
     const body = req.body || {};
 
-    // If an id file was sent as multipart/form-data, upload it
+    // STEP 1: Handle ID file upload if provided
     if (req.file && !body.id_file_url) {
       try {
         let up;
@@ -272,6 +300,14 @@ export const confirmBooking = async (req, res) => {
         console.error('ID upload failed', uploadErr);
         return res.status(500).json({ success: false, error: 'Failed to upload ID file' });
       }
+    }
+
+    // STEP 2: Validate ID file is present BEFORE payment verification
+    if (!body.id_file_url) {
+      return res.status(400).json({ 
+        success: false, 
+        error: 'ID file is required. Please upload your identification document.' 
+      });
     }
 
     const provider = (body.provider || '').toLowerCase();
@@ -294,9 +330,6 @@ export const confirmBooking = async (req, res) => {
         
       if (!payment_reference) {
         return res.status(400).json({ success: false, error: 'Payment reference is required' });
-      }
-      if (!body.id_file_url) {
-        return res.status(400).json({ success: false, error: 'ID file is required' });
       }
 
       const secret = process.env.PAYSTACK_SECRET_KEY;
@@ -353,7 +386,7 @@ export const confirmBooking = async (req, res) => {
         status: 'confirmed',
       };
 
-      // Final check just before insert to minimize race condition
+      // Final check just before insert
       const finalCheck = await checkRangeOverlap(requestedRoom, checkIn, checkOut);
       if (finalCheck.overlapping) {
         return res.status(409).json({ 

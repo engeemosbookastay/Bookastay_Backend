@@ -10,13 +10,25 @@ cloudinary.config({
 });
 
 async function uploadBuffer(buffer, filename) {
-  // upload via stream
+  // Upload via stream with proper configuration
   return new Promise((resolve, reject) => {
-    const stream = cloudinary.uploader.upload_stream({ folder: 'bookings' }, (error, result) => {
-      if (error) return reject(error);
-      resolve(result);
-    });
-    stream.end(buffer);
+    const uploadStream = cloudinary.uploader.upload_stream(
+      { 
+        folder: 'bookings/ids',
+        resource_type: 'auto', //  This handles both images AND PDFs
+        public_id: `id_${Date.now()}_${filename?.replace(/\.[^/.]+$/, '') || 'document'}`
+      }, 
+      (error, result) => {
+        if (error) {
+          console.error('Cloudinary upload error:', error);
+          return reject(error);
+        }
+        console.log('Cloudinary upload success:', result.secure_url);
+        resolve(result);
+      }
+    );
+    
+    uploadStream.end(buffer);
   });
 }
 
