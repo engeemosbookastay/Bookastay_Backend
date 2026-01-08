@@ -1,10 +1,12 @@
+// bookingsController.js
 import { v4 as uuidv4 } from 'uuid';
-// import cloudinary from '../services/cloudinaryClient.js';
 import { supabaseAdmin } from '../services/supabase.js';
-// import cloudinary from '../services/cloudinaryClient.js';
-
 import cloudinary, { uploadBuffer } from '../services/cloudinaryClient.js';
-
+import nodemailer from 'nodemailer';
+import fs from 'fs';
+import path from 'path';
+import PDFDocument from 'pdfkit';
+import axios from 'axios';
 
 const CLEANING_FEE = 20000;
 const SERVICE_FEE = 25000;
@@ -12,6 +14,52 @@ const EXTRA_GUEST_PER_NIGHT = 5000;
 const PRICE_ENTIRE_APARTMENT = 100000;
 const PRICE_SINGLE_ROOM = 60000;
 const MIN_NIGHTS_SINGLE_ROOM = 2;
+
+// --- Nodemailer transporter ---
+const transporter = nodemailer.createTransport({
+    host: process.env.SMTP_HOST || '26.qservers.net',
+    port: process.env.SMTP_PORT || 465,
+    secure: true,
+    auth: {
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASS,
+    },
+});
+
+// --- PDF Generation ---
+const generateReceiptPDF = (bookingData, outputPath) => {
+    const doc = new PDFDocument();
+    doc.pipe(fs.createWriteStream(outputPath));
+
+    doc.fontSize(20).text('Booking Confirmation', { align: 'center' });
+    doc.moveDown();
+    doc.fontSize(14).text(`Booking ID: ${bookingData.transaction_ref}`);
+    doc.text(`Name: ${bookingData.name}`);
+    doc.text(`Room: ${bookingData.room_type}`);
+    doc.text(`Check-in: ${bookingData.check_in}`);
+    doc.text(`Check-out: ${bookingData.check_out}`);
+    doc.text(`Guests: ${bookingData.guests}`);
+    doc.text(`Total Paid: ₦${bookingData.price}`);
+
+    doc.end();
+};
+
+// --- Send Email ---
+const sendBookingEmail = async (toEmail, bookingData, pdfPath) => {
+    const mailOptions = {
+        from: `"ENGEEMOS Book-A-Stay" <${process.env.EMAIL_USER}>`,
+        to: toEmail,
+        subject: 'Booking Confirmation - Book A Stay',
+        text: `Hello ${bookingData.name},\n\nThank you for your booking! Please find attached your receipt.`,
+        attachments: pdfPath ? [
+            { filename: path.basename(pdfPath), path: pdfPath }
+        ] : [],
+    };
+
+    const info = await transporter.sendMail(mailOptions);
+    console.log('Email sent: ', info.messageId);
+    return info;
+};
 
 // --- Utilities ---
 const parseDate = (dateString) => {
@@ -27,7 +75,7 @@ const calculateNights = (check_in, check_out) => {
   return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 };
 
-// --- Overlap helper ---
+// --- Overlap Helper ---
 const checkRangeOverlap = async (room_type, check_in, check_out) => {
   const requestedIn = parseDate(check_in);
   const requestedOut = parseDate(check_out);
@@ -101,6 +149,23 @@ const checkRangeOverlap = async (room_type, check_in, check_out) => {
   return { overlapping: false, blocking: null };
 };
 
+// --- List Booking Dates ---
+export const listBookingDates = async (req, res) => {
+  try {
+    const { data, error } = await supabaseAdmin
+      .from('bookings')
+      .select('check_in, check_out, room_type, status')
+      .in('status', ['booked', 'confirmed']);
+
+    if (error) throw error;
+
+    res.status(200).json({ success: true, bookings: data || [] });
+  } catch (err) {
+    console.error('Error fetching booking dates:', err);
+    res.status(500).json({ success: false, message: 'Failed to fetch booking dates' });
+  }
+};
+
 // --- Availability Check ---
 export const getAvailability = async (req, res) => {
   try {
@@ -135,107 +200,42 @@ export const getAvailability = async (req, res) => {
   }
 };
 
-
-
-
-
-
+// --- Upload ID File ---
 export const uploadIdFile = async (req, res) => {
   try {
-    console.log('Upload ID endpoint hit');
-    console.log('req.file exists:', !!req.file);
+    if (!req.file) return res.status(400).json({ success: false, message: 'No file uploaded' });
 
-    if (!req.file) {
-      console.log('No file in request');
-      return res.status(400).json({ success: false, message: 'No file uploaded' });
-    }
-
-    console.log('File details:', {
-      originalname: req.file.originalname,
-      mimetype: req.file.mimetype,
-      size: req.file.size,
-      hasBuffer: !!req.file.buffer
-    });
-
-    if (!req.file.buffer) {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'File buffer not available' 
-      });
-    }
-
-    console.log('Uploading to Cloudinary...');
-    // Use uploadBuffer directly (not cloudinary.uploadBuffer)
     const uploaded = await uploadBuffer(req.file.buffer, req.file.originalname);
-    
-    console.log('Upload successful:', uploaded.secure_url);
-
     const url = uploaded.secure_url || uploaded.url;
-    
-    if (!url) {
-      console.error('Upload succeeded but no URL returned');
-      return res.status(500).json({ 
-        success: false, 
-        message: 'Upload completed but URL not generated' 
-      });
-    }
+
+    if (!url) return res.status(500).json({ success: false, message: 'Upload completed but URL not generated' });
 
     res.status(200).json({ success: true, url });
-
   } catch (err) {
     console.error('Error uploading ID file:', err);
-    console.error('Error stack:', err.stack);
-    res.status(500).json({ 
-      success: false, 
-      message: 'Failed to upload ID file: ' + err.message 
-    });
+    res.status(500).json({ success: false, message: 'Failed to upload ID file: ' + err.message });
   }
 };
+
 // --- Create Booking ---
-// NOTE: This function is NOT used in the current booking flow
-// The frontend goes directly to confirmBooking after payment
-// Keeping this for backwards compatibility or alternative booking flows
 export const createBooking = async (req, res) => {
   try {
-    const {
-      user_id,
-      room_type,
-      guests,
-      check_in_date,
-      check_out_date,
-      name,
-      email,
-      phone,
-      id_type,
-      id_file_url,
-    } = req.body;
+    const { user_id, room_type, guests, check_in_date, check_out_date, name, email, phone, id_type, id_file_url } = req.body;
 
     if (!check_in_date || !check_out_date || !name || !email || !phone) {
       return res.status(400).json({ success: false, message: 'Missing required fields' });
     }
 
-    // REMOVED: ID file validation
-    // ID file is now validated and uploaded in confirmBooking (after payment)
-    // This allows the booking flow to proceed to payment before ID upload
-
     const nights = calculateNights(check_in_date, check_out_date);
     const requestedRoom = room_type || 'entire';
     
     if (requestedRoom.toLowerCase() !== 'entire' && nights < MIN_NIGHTS_SINGLE_ROOM) {
-      return res.status(400).json({
-        success: false,
-        message: `Single room bookings require a minimum of ${MIN_NIGHTS_SINGLE_ROOM} nights. You selected ${nights} night(s).`
-      });
+      return res.status(400).json({ success: false, message: `Single room bookings require a minimum of ${MIN_NIGHTS_SINGLE_ROOM} nights.` });
     }
 
     const overlapCheck = await checkRangeOverlap(requestedRoom, check_in_date, check_out_date);
-    
     if (overlapCheck.overlapping) {
-      return res.status(409).json({ 
-        success: false, 
-        message: overlapCheck.message || 'Selected dates are already booked',
-        blocking: overlapCheck.blocking
-      });
+      return res.status(409).json({ success: false, message: overlapCheck.message, blocking: overlapCheck.blocking });
     }
 
     const base_price = requestedRoom.toLowerCase() === 'entire' ? PRICE_ENTIRE_APARTMENT : PRICE_SINGLE_ROOM;
@@ -260,20 +260,11 @@ export const createBooking = async (req, res) => {
     };
 
     const finalCheck = await checkRangeOverlap(requestedRoom, check_in_date, check_out_date);
-    if (finalCheck.overlapping) {
-      return res.status(409).json({ 
-        success: false, 
-        message: finalCheck.message || 'Selected dates were just taken, please try another range',
-        blocking: finalCheck.blocking
-      });
-    }
+    if (finalCheck.overlapping) return res.status(409).json({ success: false, message: finalCheck.message, blocking: finalCheck.blocking });
 
-    const { data, error } = await supabaseAdmin
-      .from('bookings')
-      .insert([bookingData])
-      .select();
-
+    const { data, error } = await supabaseAdmin.from('bookings').insert([bookingData]).select();
     if (error) throw error;
+
     res.status(200).json({ success: true, booking: data });
   } catch (err) {
     console.error('Error creating booking:', err);
@@ -281,90 +272,116 @@ export const createBooking = async (req, res) => {
   }
 };
 
-// --- Confirm Booking (Paystack or existing transaction) ---
+// --- Confirm Booking (Paystack) ---
 export const confirmBooking = async (req, res) => {
   try {
+    console.log('=== CONFIRM BOOKING REQUEST ===');
+    console.log('Body keys:', Object.keys(req.body || {}));
+    console.log('Has file:', !!req.file);
+
     const body = req.body || {};
 
-    // STEP 1: Handle ID file upload if provided
-    if (req.file && !body.id_file_url) {
-      try {
-        let up;
-        if (req.file.buffer && typeof cloudinary.uploadBuffer === 'function') {
-          up = await cloudinary.uploadBuffer(req.file.buffer, req.file.originalname || `id_${Date.now()}`);
-        } else if (req.file.path && cloudinary.uploader && typeof cloudinary.uploader.upload === 'function') {
-          up = await cloudinary.uploader.upload(req.file.path, { folder: 'bookings/ids' });
-        }
-        body.id_file_url = up?.secure_url || up?.url || up?.secureUrl || body.id_file_url;
-      } catch (uploadErr) {
-        console.error('ID upload failed', uploadErr);
-        return res.status(500).json({ success: false, error: 'Failed to upload ID file' });
-      }
+    // Handle ID file upload if needed
+    if (!body.id_file_url && req.file) {
+      console.log('Uploading ID file from request...');
+      const uploaded = await uploadBuffer(req.file.buffer, req.file.originalname || `id_${Date.now()}`);
+      body.id_file_url = uploaded.secure_url || uploaded.url;
+      console.log('ID file uploaded:', body.id_file_url);
     }
 
-    // STEP 2: Validate ID file is present BEFORE payment verification
     if (!body.id_file_url) {
-      return res.status(400).json({ 
-        success: false, 
-        error: 'ID file is required. Please upload your identification document.' 
-      });
+      console.error('No ID file URL provided');
+      return res.status(400).json({ success: false, error: 'ID file is required.' });
     }
 
     const provider = (body.provider || '').toLowerCase();
-    let _fetch = global.fetch;
-    if (typeof _fetch !== 'function') {
-      const nodeFetch = await import('node-fetch');
-      _fetch = nodeFetch.default;
-    }
-
     const fallbackUserId = process.env.GUEST_USER_ID || uuidv4();
 
-    // Paystack verification
     if (provider === 'paystack') {
-      const payment_reference =
-        body.payment_reference ||
-        body.transaction_ref ||
-        body.reference ||
-        body.tx_ref ||
-        body.transaction_reference;
-        
+      const payment_reference = body.payment_reference || body.transaction_ref || body.tx_ref || body.transaction_reference;
+      
       if (!payment_reference) {
+        console.error('No payment reference provided');
         return res.status(400).json({ success: false, error: 'Payment reference is required' });
       }
 
+      console.log('Payment reference:', payment_reference);
+
       const secret = process.env.PAYSTACK_SECRET_KEY;
       if (!secret) {
-        return res.status(500).json({ success: false, error: 'Paystack secret key missing' });
+        console.error('PAYSTACK_SECRET_KEY is not set in environment variables');
+        return res.status(500).json({ success: false, error: 'Payment configuration error' });
       }
 
       const verifyUrl = `https://api.paystack.co/transaction/verify/${encodeURIComponent(payment_reference)}`;
-      const resp = await _fetch(verifyUrl, {
-        method: 'GET',
-        headers: { Authorization: `Bearer ${secret}`, 'Content-Type': 'application/json' },
-      });
-      const json = await resp.json();
-
-      if (!resp.ok || !json?.data || json.data.status !== 'success') {
-        console.error('Paystack verification failed', json);
-        return res.status(400).json({ success: false, error: 'Payment verification failed' });
-      }
-
-      // Check availability before inserting confirmed paid booking
-      const requestedRoom = (body.room_type || 'entire');
-      const checkIn = body.check_in_date || body.check_in;
-      const checkOut = body.check_out_date || body.check_out;
       
-      const overlapCheck = await checkRangeOverlap(requestedRoom, checkIn, checkOut);
-      if (overlapCheck.overlapping) {
-        return res.status(409).json({ 
+      console.log('Verifying payment with Paystack using axios...');
+      console.log('Verify URL:', verifyUrl);
+      
+      let response;
+      
+      try {
+        // Use axios with explicit timeout and headers
+        response = await axios.get(verifyUrl, {
+          headers: { 
+            Authorization: `Bearer ${secret}`,
+            'Content-Type': 'application/json',
+            'Cache-Control': 'no-cache'
+          },
+          timeout: 30000, // 30 second timeout
+          validateStatus: function (status) {
+            return status >= 200 && status < 500; // Don't throw on 4xx
+          }
+        });
+
+        console.log('Paystack verification response:', {
+          status: response.status,
+          dataStatus: response.data?.data?.status,
+          message: response.data?.message
+        });
+      } catch (axiosError) {
+        console.error('Axios error during Paystack verification:', {
+          message: axiosError.message,
+          code: axiosError.code,
+          response: axiosError.response?.data
+        });
+        return res.status(500).json({ 
           success: false, 
-          error: overlapCheck.message || 'Selected dates are no longer available',
-          message: overlapCheck.message || 'Selected dates are no longer available',
-          blocking: overlapCheck.blocking
+          error: 'Failed to verify payment with Paystack',
+          details: axiosError.message
         });
       }
 
-      const paidAmount = (json.data.amount || 0) / 100;
+      if (response.status !== 200 || !response.data?.data || response.data.data.status !== 'success') {
+        console.error('Payment verification failed:', response.data);
+        return res.status(400).json({ 
+          success: false, 
+          error: 'Payment verification failed',
+          details: response.data?.message || 'Unknown error'
+        });
+      }
+
+      console.log('Payment verified successfully');
+
+      const requestedRoom = body.room_type || 'entire';
+      const checkIn = body.check_in_date || body.check_in;
+      const checkOut = body.check_out_date || body.check_out;
+
+      console.log('Checking room availability:', { requestedRoom, checkIn, checkOut });
+
+      const overlapCheck = await checkRangeOverlap(requestedRoom, checkIn, checkOut);
+      if (overlapCheck.overlapping) {
+        console.error('Room not available:', overlapCheck.message);
+        return res.status(409).json({ 
+          success: false, 
+          error: overlapCheck.message, 
+          blocking: overlapCheck.blocking 
+        });
+      }
+
+      console.log('Room is available');
+
+      const paidAmount = (response.data.data.amount || 0) / 100;
       const clientPrice = Number(body.price || 0);
 
       const bookingPayload = {
@@ -386,16 +403,10 @@ export const confirmBooking = async (req, res) => {
         status: 'confirmed',
       };
 
-      // Final check just before insert
-      const finalCheck = await checkRangeOverlap(requestedRoom, checkIn, checkOut);
-      if (finalCheck.overlapping) {
-        return res.status(409).json({ 
-          success: false, 
-          error: 'These dates were just booked by another guest. Please select different dates for a refund.',
-          message: 'These dates were just booked by another guest. Please contact support for a refund.',
-          blocking: finalCheck.blocking
-        });
-      }
+      console.log('Creating booking with payload:', {
+        ...bookingPayload,
+        id_file_url: bookingPayload.id_file_url ? 'PROVIDED' : 'MISSING'
+      });
 
       const { data, error } = await supabaseAdmin
         .from('bookings')
@@ -403,97 +414,85 @@ export const confirmBooking = async (req, res) => {
         .select()
         .maybeSingle();
 
-      if (error) throw error;
+      if (error) {
+        console.error('Database error creating booking:', error);
+        throw error;
+      }
+
+      console.log('Booking created successfully:', data?.id);
+
+      // --- Generate PDF & Send Email ---
+      const receiptsDir = './receipts';
+      if (!fs.existsSync(receiptsDir)) {
+        fs.mkdirSync(receiptsDir, { recursive: true });
+      }
+      
+      const pdfPath = path.join(receiptsDir, `${bookingPayload.transaction_ref}.pdf`);
+      generateReceiptPDF(bookingPayload, pdfPath);
+      
+      try {
+        await sendBookingEmail(bookingPayload.email, bookingPayload, pdfPath);
+        console.log('Confirmation email sent to:', bookingPayload.email);
+      } catch (emailErr) {
+        console.error('Failed to send email, but booking was created:', emailErr);
+      }
+
       return res.status(201).json({ success: true, data });
     }
 
-    // Mark existing booking as paid
-    if (body.transaction_ref) {
-      const { transaction_ref } = body;
-      const { data, error } = await supabaseAdmin
-        .from('bookings')
-        .update({ payment_status: 'paid', status: 'confirmed' })
-        .eq('transaction_ref', transaction_ref)
-        .select()
-        .maybeSingle();
-
-      if (error) throw error;
-      return res.status(200).json({ success: true, data });
-    }
-
+    console.error('Unsupported provider:', provider);
     res.status(400).json({ success: false, error: 'Unsupported provider or missing payment reference' });
   } catch (err) {
     console.error('Error confirming booking:', err);
-    res.status(500).json({ success: false, message: 'Failed to confirm booking' });
+    console.error('Error stack:', err.stack);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Failed to confirm booking',
+      error: err.message 
+    });
   }
 };
 
-// --- Get All Bookings ---
-export const getAllBookings = async (req, res) => {
+// --- Get Single Booking ---
+export const getBooking = async (req, res) => {
   try {
+    const { id } = req.params;
+
     const { data, error } = await supabaseAdmin
       .from('bookings')
       .select('*')
-      .order('created_at', { ascending: false });
+      .eq('id', id)
+      .single();
+
     if (error) throw error;
-    res.status(200).json({ success: true, data });
+
+    if (!data) {
+      return res.status(404).json({ success: false, message: 'Booking not found' });
+    }
+
+    res.status(200).json({ success: true, booking: data });
   } catch (err) {
-    console.error('Error fetching bookings:', err);
-    res.status(500).json({ success: false, message: 'Failed to fetch bookings' });
+    console.error('Error fetching booking:', err);
+    res.status(500).json({ success: false, message: 'Failed to fetch booking' });
   }
 };
 
-// --- List Booking Dates ---
-export const listBookingDates = async (req, res) => {
-  try {
-    const { data, error } = await supabaseAdmin
-      .from('bookings')
-      .select('check_in, check_out, room_type')
-      .in('status', ['confirmed', 'booked']);
-      
-    if (error) throw error;
-    res.status(200).json({ success: true, dates: data });
-  } catch (err) {
-    console.error('Error fetching booking dates:', err);
-    res.status(500).json({ success: false, message: 'Failed to get booking dates' });
-  }
-};
-
-// --- Get Booking by ID ---
-export const getBooking = async (req, res) => {
-  try {
-    const id = req.params.id;
-    if (!id) return res.status(400).json({ success: false, message: 'Booking ID required' });
-
-    const { data, error } = await supabaseAdmin.from('bookings').select('*').eq('id', id).maybeSingle();
-    if (error) throw error;
-    if (!data) return res.status(404).json({ success: false, message: 'Booking not found' });
-
-    res.status(200).json({ success: true, data });
-  } catch (err) {
-    console.error('getBooking error:', err);
-    res.status(500).json({ success: false, message: 'Failed to get booking' });
-  }
-};
-
-// --- Simulate Payment ---
+// --- Simulate Payment (for testing) ---
 export const simulatePayment = async (req, res) => {
   try {
-    const { bookingId, amount } = req.body;
-    if (!bookingId) return res.status(400).json({ success: false, message: 'bookingId required' });
+    const { transaction_ref } = req.body;
 
-    const patch = { status: 'confirmed', paid_amount: amount || null, paid_at: new Date().toISOString() };
-    const { data, error } = await supabaseAdmin
-      .from('bookings')
-      .update(patch)
-      .eq('id', bookingId)
-      .select()
-      .maybeSingle();
+    if (!transaction_ref) {
+      return res.status(400).json({ success: false, message: 'Transaction reference is required' });
+    }
 
-    if (error) throw error;
-    res.status(200).json({ success: true, data });
+    res.status(200).json({ 
+      success: true, 
+      message: 'Payment simulated successfully',
+      transaction_ref 
+    });
   } catch (err) {
-    console.error('simulatePayment error:', err);
+    console.error('Error simulating payment:', err);
     res.status(500).json({ success: false, message: 'Failed to simulate payment' });
   }
 };

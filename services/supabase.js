@@ -3,6 +3,11 @@ import { createClient } from '@supabase/supabase-js';
 
 dotenv.config();
 
+// TEMPORARY: Disable SSL verification globally for development
+// This fixes SSL/TLS handshake issues on Windows
+// Remove this line for production!
+process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
+
 const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseAnonKey = process.env.SUPABASE_ANON_KEY;
 const supabaseServiceKey = process.env.SERVICE_ROLE_KEY;
@@ -11,12 +16,12 @@ if (!supabaseUrl || !supabaseAnonKey) {
   throw new Error('Supabase URL and anon key must be provided in .env file');
 }
 
-// Public/anon client (safe for typical frontend-like operations used on server)
+// Public/anon client - using default fetch with SSL disabled globally
 const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: { persistSession: false },
 });
 
-// Admin client using service role key (create if SERVICE_ROLE_KEY provided)
+// Admin client using service role key
 let supabaseAdmin = null;
 if (supabaseServiceKey) {
   supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
@@ -30,9 +35,9 @@ if (supabaseServiceKey) {
 const connectSupabase = async () => {
   const errors = [];
   try {
-  const { error: userError } = await supabase.from('Users').select('id').limit(1);
-  if (userError) errors.push(`Users table error: ${userError.message}`);
-  else console.log('Connected to Users table successfully');
+    const { error: userError } = await supabase.from('Users').select('id').limit(1);
+    if (userError) errors.push(`Users table error: ${userError.message}`);
+    else console.log('Connected to Users table successfully');
 
     const { error: contactError } = await supabase.from('Contact').select('id').limit(1);
     if (contactError) errors.push(`Contact table error: ${contactError.message}`);
