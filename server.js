@@ -11,6 +11,9 @@ import userRoutes from './routes/user.js';
 import calendarRoutes from './routes/calendar.js';
 import { supabase, connectSupabase } from './services/supabase.js';
 
+import shuftiProRoutes from './routes/shuftiproroutes.js';
+
+
 dotenv.config();
 
 const app = express();
@@ -57,6 +60,7 @@ app.use('/api', adminRoutes);
 app.use('/api/contact', contactRoutes);
 app.use('/auth', userRoutes);
 app.use('/api/calendar', calendarRoutes);
+app.use('/api/shufti', shuftiProRoutes);
 
 const port = process.env.PORT || 4000;
 

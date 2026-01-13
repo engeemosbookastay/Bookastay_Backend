@@ -7,6 +7,7 @@ import fs from 'fs';
 import path from 'path';
 import PDFDocument from 'pdfkit';
 import axios from 'axios';
+import { createVerificationRequest } from '../services/shuftiProClient.js';
 
 const CLEANING_FEE = 20000;
 const SERVICE_FEE = 25000;
@@ -87,8 +88,8 @@ const generateCustomerEmailHTML = (bookingData) => {
     <body>
         <div class="container">
             <div class="header">
-                <h1>🏠 ENGEEMOS Book-A-Stay</h1>
-                <p>Your Luxury Home Away From Home</p>
+                <h1> Engeemos Bookastay</h1>
+                <p>...hosting temporary stay in exotic style</p>
             </div>
             
             <div class="content">
@@ -97,7 +98,7 @@ const generateCustomerEmailHTML = (bookingData) => {
                 </div>
                 
                 <div class="message">
-                    Thank you for choosing ENGEEMOS Book-A-Stay! We're thrilled to confirm your reservation. 
+                    Thank you for choosing Engeemos Bookastay! We're thrilled to confirm your reservation. 
                     Your booking has been successfully processed and we can't wait to host you.
                 </div>
                 
@@ -136,6 +137,22 @@ const generateCustomerEmailHTML = (bookingData) => {
                     <div style="font-size: 12px; opacity: 0.8; margin-top: 5px;">✓ Payment Confirmed</div>
                 </div>
                 
+                ${bookingData.verification_url ? `
+                <div style="background: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%); padding: 25px; border-radius: 8px; margin: 25px 0; text-align: center; color: #ffffff;">
+                    <h2 style="margin: 0 0 15px 0; color: #ffffff; font-size: 20px;">🔐 Identity Verification Required</h2>
+                    <p style="margin: 0 0 20px 0; font-size: 14px; opacity: 0.95;">
+                        To complete your booking, please verify your identity. This is a quick and secure process.
+                    </p>
+                    <a href="${bookingData.verification_url}"
+                       style="display: inline-block; background-color: #ffffff; color: #ff6b6b; padding: 15px 40px; text-decoration: none; border-radius: 30px; font-weight: 700; font-size: 16px; margin: 10px 0;">
+                        Complete Verification Now
+                    </a>
+                    <p style="margin: 15px 0 0 0; font-size: 12px; opacity: 0.85;">
+                        ⏱️ Verification takes less than 2 minutes
+                    </p>
+                </div>
+                ` : ''}
+
                 <div class="highlight">
                     <strong>📍 Important Information:</strong><br>
                     • Check-in time: 2:00 PM<br>
@@ -143,7 +160,7 @@ const generateCustomerEmailHTML = (bookingData) => {
                     • Please bring a valid ID for verification<br>
                     • Your booking receipt is attached to this email
                 </div>
-                
+
                 <div style="text-align: center;">
                     <p style="color: #666666; margin-bottom: 10px;">Need to make changes or have questions?</p>
                     <a href="mailto:${process.env.EMAIL_USER}" class="cta-button">Contact Us</a>
@@ -156,16 +173,16 @@ const generateCustomerEmailHTML = (bookingData) => {
             
             <div class="footer">
                 <div style="margin-bottom: 20px;">
-                    <strong style="font-size: 16px;">ENGEEMOS Book-A-Stay</strong>
+                    <strong style="font-size: 16px;">Engeemos Bookastay</strong>
                 </div>
                 
                 <div class="social-links">
-                    <a href="tel:+2348162176783">📞 +234 816 217 6783</a> | 
+                    <a href="tel:+2348166939592">📞 +234 816 693 9592</a> | 
                     <a href="mailto:${process.env.EMAIL_USER}">✉️ ${process.env.EMAIL_USER}</a>
                 </div>
                 
                 <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #555555;">
-                    <p style="margin: 5px 0;">© ${new Date().getFullYear()} ENGEEMOS Book-A-Stay. All rights reserved.</p>
+                    <p style="margin: 5px 0;">© ${new Date().getFullYear()} Engeemos Bookastay. All rights reserved.</p>
                     <p style="margin: 5px 0; font-size: 11px; color: #999999;">
                         This is an automated message. Please do not reply directly to this email.
                     </p>
@@ -213,7 +230,7 @@ const generateClientEmailHTML = (bookingData) => {
         <div class="container">
             <div class="header">
                 <h1>🎉 New Booking Alert!</h1>
-                <p>ENGEEMOS Book-A-Stay Management Dashboard</p>
+                <p>Engeemos Bookastay Management Dashboard</p>
             </div>
             
             <div class="content">
@@ -306,7 +323,7 @@ const generateClientEmailHTML = (bookingData) => {
             </div>
             
             <div class="footer">
-                <p style="margin: 5px 0;">© ${new Date().getFullYear()} ENGEEMOS Book-A-Stay Management System</p>
+                <p style="margin: 5px 0;">© ${new Date().getFullYear()} Engeemos Bookastay Management System</p>
                 <p style="margin: 5px 0; font-size: 11px; color: #999999;">
                     This is an automated notification. Login to your dashboard for more details.
                 </p>
@@ -320,9 +337,9 @@ const generateClientEmailHTML = (bookingData) => {
 // --- Send Booking Email to Customer ---
 const sendCustomerEmail = async (toEmail, bookingData, pdfPath) => {
     const mailOptions = {
-        from: `"ENGEEMOS Book-A-Stay" <${process.env.EMAIL_USER}>`,
+        from: `"Engeemos Bookastay" <${process.env.EMAIL_USER}>`,
         to: toEmail,
-        subject: '🎉 Booking Confirmed - ENGEEMOS Book-A-Stay',
+        subject: '🎉 Booking Confirmed - Engeemos Bookastay',
         html: generateCustomerEmailHTML(bookingData),
         attachments: pdfPath ? [
             { 
@@ -343,9 +360,9 @@ const sendClientNotification = async (bookingData, pdfPath) => {
     const clientEmail = process.env.CLIENT_NOTIFICATION_EMAIL || process.env.EMAIL_USER;
     
     const mailOptions = {
-        from: `"ENGEEMOS Book-A-Stay System" <${process.env.EMAIL_USER}>`,
+        from: `"Engeemos Bookastay System" <${process.env.EMAIL_USER}>`,
         to: clientEmail,
-        subject: `🏠 New Booking: ${bookingData.name} - ₦${Number(bookingData.price).toLocaleString()}`,
+        subject: ` New Booking: ${bookingData.name} - ₦${Number(bookingData.price).toLocaleString()}`,
         html: generateClientEmailHTML(bookingData),
         attachments: pdfPath ? [
             { 
@@ -720,22 +737,64 @@ export const confirmBooking = async (req, res) => {
 
       console.log('Booking created successfully:', data?.id);
 
+      // --- Initiate Shufti Pro Verification ---
+      let verificationUrl = null;
+      let verificationReference = null;
+
+      try {
+        console.log('Initiating Shufti Pro verification...');
+        const verificationResult = await createVerificationRequest({
+          name: bookingPayload.name,
+          email: bookingPayload.email,
+          bookingReference: payment_reference
+        });
+
+        if (verificationResult.success) {
+          console.log('Verification initiated successfully:', verificationResult.verification_url);
+          verificationUrl = verificationResult.verification_url;
+          verificationReference = verificationResult.reference;
+
+          // Update booking with verification details
+          await supabaseAdmin
+            .from('bookings')
+            .update({
+              verification_reference: verificationReference,
+              verification_status: 'pending',
+              verification_url: verificationUrl,
+              verification_event: verificationResult.event || 'request.pending'
+            })
+            .eq('id', data.id);
+
+          console.log('Booking updated with verification details');
+        } else {
+          console.error('Failed to initiate verification:', verificationResult.error);
+        }
+      } catch (verificationErr) {
+        console.error('Error initiating verification (non-fatal):', verificationErr);
+      }
+
       // --- Generate PDF & Send Emails ---
       const receiptsDir = './receipts';
       if (!fs.existsSync(receiptsDir)) {
         fs.mkdirSync(receiptsDir, { recursive: true });
       }
-      
+
       const pdfPath = path.join(receiptsDir, `${bookingPayload.transaction_ref}.pdf`);
       generateReceiptPDF(bookingPayload, pdfPath);
-      
+
+      // Add verification URL to booking payload for email
+      const bookingDataWithVerification = {
+        ...bookingPayload,
+        verification_url: verificationUrl
+      };
+
       try {
-        // Send email to customer
-        await sendCustomerEmail(bookingPayload.email, bookingPayload, pdfPath);
+        // Send email to customer (with verification link if available)
+        await sendCustomerEmail(bookingPayload.email, bookingDataWithVerification, pdfPath);
         console.log('Confirmation email sent to customer:', bookingPayload.email);
-        
+
         // Send notification to client (property owner)
-        await sendClientNotification(bookingPayload, pdfPath);
+        await sendClientNotification(bookingDataWithVerification, pdfPath);
         console.log('Notification email sent to property owner');
       } catch (emailErr) {
         console.error('Failed to send email, but booking was created:', emailErr);
