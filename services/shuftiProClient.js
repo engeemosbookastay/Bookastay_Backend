@@ -288,7 +288,6 @@ export const verifyWebhookSignature = (payload, signature) => {
     return false;
   }
 };
-
 export const processCallback = (callbackData) => {
   const {
     reference,
