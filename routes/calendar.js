@@ -9,16 +9,31 @@ router.get('/airbnb.ics', async (req, res) => {
     // Fetch all confirmed bookings from your database
     const { data: bookings, error } = await supabase
       .from('bookings')
-      .select('check_in_date, check_out_date, status')
+      .select('check_in, check_out, status')
       .eq('status', 'confirmed');
 
-    if (error) throw error;
+    if (error) {
+      console.error('Database error:', error);
+      throw error;
+    }
+
+    // Handle empty bookings - return empty calendar
+    if (!bookings || bookings.length === 0) {
+      console.log('No confirmed bookings found, returning empty calendar');
+      const { error: icsError, value } = createEvents([]);
+
+      if (icsError) throw icsError;
+
+      res.setHeader('Content-Type', 'text/calendar; charset=utf-8');
+      res.setHeader('Content-Disposition', 'attachment; filename="bookastay.ics"');
+      return res.send(value);
+    }
 
     // Convert to iCal format
     const events = bookings.map(booking => {
-      const checkIn = new Date(booking.check_in_date);
-      const checkOut = new Date(booking.check_out_date);
-      
+      const checkIn = new Date(booking.check_in);
+      const checkOut = new Date(booking.check_out);
+
       return {
         start: [
           checkIn.getFullYear(),
@@ -36,9 +51,13 @@ router.get('/airbnb.ics', async (req, res) => {
       };
     });
 
+    console.log(`Generating calendar with ${events.length} event(s)`);
     const { error: icsError, value } = createEvents(events);
-    
-    if (icsError) throw icsError;
+
+    if (icsError) {
+      console.error('iCal creation error:', icsError);
+      throw icsError;
+    }
 
     res.setHeader('Content-Type', 'text/calendar; charset=utf-8');
     res.setHeader('Content-Disposition', 'attachment; filename="bookastay.ics"');
