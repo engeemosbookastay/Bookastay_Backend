@@ -165,10 +165,7 @@ const generateCustomerEmailHTML = (bookingData) => {
                     <p style="color: #666666; margin-bottom: 10px;">Need to make changes or have questions?</p>
                     <a href="mailto:${process.env.EMAIL_USER}" class="cta-button">Contact Us</a>
                 </div>
-                
-                <div class="message" style="margin-top: 30px; font-size: 14px; color: #999999;">
-                    We look forward to providing you with an exceptional stay experience!
-                </div>
+              
             </div>
             
             <div class="footer">
@@ -212,121 +209,153 @@ const generateClientEmailHTML = (bookingData) => {
         <style>
             body { margin: 0; padding: 0; font-family: 'Arial', sans-serif; background-color: #f4f4f4; }
             .container { max-width: 600px; margin: 0 auto; background-color: #ffffff; }
-            .header { background: linear-gradient(135deg, #2ecc71 0%, #27ae60 100%); padding: 40px 20px; text-align: center; }
+            .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 40px 20px; text-align: center; }
             .header h1 { color: #ffffff; margin: 0; font-size: 28px; font-weight: 700; }
             .header p { color: #e0e0e0; margin: 10px 0 0 0; font-size: 14px; }
             .content { padding: 40px 30px; }
-            .alert-box { background-color: #2ecc7115; border-left: 4px solid #2ecc71; padding: 20px; border-radius: 8px; margin: 20px 0; }
-            .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin: 20px 0; }
-            .info-item { background-color: #f8f9fa; padding: 15px; border-radius: 8px; }
-            .info-label { color: #666666; font-size: 12px; font-weight: 600; text-transform: uppercase; margin-bottom: 5px; }
-            .info-value { color: #333333; font-size: 16px; font-weight: 700; }
-            .revenue-box { background: linear-gradient(135deg, #2ecc71 0%, #27ae60 100%); color: #ffffff; padding: 25px; border-radius: 8px; text-align: center; margin: 25px 0; }
-            .revenue-box .amount { font-size: 36px; font-weight: 700; margin: 10px 0; }
-            .footer { background-color: #333333; color: #ffffff; padding: 20px; text-align: center; font-size: 12px; }
+            .greeting { font-size: 18px; color: #333333; margin-bottom: 20px; }
+            .message { color: #666666; line-height: 1.6; margin-bottom: 30px; }
+            .booking-card { background: linear-gradient(135deg, #667eea15 0%, #764ba215 100%); border-left: 4px solid #667eea; padding: 25px; border-radius: 8px; margin: 30px 0; }
+            .booking-detail { display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid #e0e0e0; }
+            .booking-detail:last-child { border-bottom: none; }
+            .detail-label { color: #666666; font-weight: 600; }
+            .detail-value { color: #333333; font-weight: 700; }
+            .highlight { background-color: #fff9e6; padding: 20px; border-radius: 8px; margin: 25px 0; border: 2px dashed #ffc107; }
+            .highlight strong { color: #ff6b6b; }
+            .total-box { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: #ffffff; padding: 20px; border-radius: 8px; text-align: center; margin: 25px 0; }
+            .total-box .amount { font-size: 32px; font-weight: 700; margin: 10px 0; }
+            .cta-button { display: inline-block; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: #ffffff; padding: 15px 40px; text-decoration: none; border-radius: 30px; font-weight: 600; margin: 20px 0; }
+            .policy-box { background-color: #f8f9fa; border: 2px solid #dee2e6; border-radius: 8px; padding: 25px; margin: 30px 0; }
+            .policy-box h3 { color: #333333; margin-top: 0; font-size: 18px; border-bottom: 2px solid #667eea; padding-bottom: 10px; }
+            .policy-box ul { margin: 15px 0; padding-left: 20px; }
+            .policy-box li { color: #555555; line-height: 1.8; margin-bottom: 12px; font-size: 14px; }
+            .policy-box .policy-note { background-color: #fff3cd; border-left: 4px solid #ffc107; padding: 15px; margin-top: 20px; border-radius: 4px; font-size: 13px; color: #856404; }
+            .footer { background-color: #333333; color: #ffffff; padding: 30px; text-align: center; font-size: 12px; }
+            .footer a { color: #667eea; text-decoration: none; }
+            .social-links { margin: 20px 0; }
+            .social-links a { display: inline-block; margin: 0 10px; color: #ffffff; text-decoration: none; }
         </style>
     </head>
     <body>
         <div class="container">
             <div class="header">
-                <h1>🎉 New Booking Alert!</h1>
-                <p>Engeemos Bookastay Management Dashboard</p>
+                <h1>🏠 Engeemos Bookastay</h1>
+                <p>...hosting temporary stay in exotic style</p>
             </div>
             
             <div class="content">
-                <div class="alert-box">
-                    <h2 style="margin-top: 0; color: #2ecc71;">✓ Booking Confirmed & Paid</h2>
-                    <p style="margin: 0; color: #666666;">You have a new confirmed booking with payment received.</p>
+                <div class="greeting">
+                    Hello ${bookingData.name}! 👋
                 </div>
                 
-                <h3 style="color: #333333; border-bottom: 2px solid #2ecc71; padding-bottom: 10px;">Guest Information</h3>
-                
-                <div class="info-grid">
-                    <div class="info-item">
-                        <div class="info-label">Guest Name</div>
-                        <div class="info-value">${bookingData.name}</div>
-                    </div>
-                    
-                    <div class="info-item">
-                        <div class="info-label">Email</div>
-                        <div class="info-value" style="font-size: 14px;">${bookingData.email}</div>
-                    </div>
-                    
-                    <div class="info-item">
-                        <div class="info-label">Phone</div>
-                        <div class="info-value">${bookingData.phone || 'Not provided'}</div>
-                    </div>
-                    
-                    <div class="info-item">
-                        <div class="info-label">Number of Guests</div>
-                        <div class="info-value">${bookingData.guests}</div>
-                    </div>
+                <div class="message">
+                    Thank you for choosing Engeemos Bookastay! We're thrilled to confirm your reservation. 
+                    Your booking has been successfully processed and we can't wait to host you.
                 </div>
                 
-                <h3 style="color: #333333; border-bottom: 2px solid #2ecc71; padding-bottom: 10px; margin-top: 30px;">Booking Details</h3>
-                
-                <div class="info-grid">
-                    <div class="info-item">
-                        <div class="info-label">Booking ID</div>
-                        <div class="info-value" style="font-size: 14px;">${bookingData.transaction_ref}</div>
+                <div class="booking-card">
+                    <h2 style="margin-top: 0; color: #667eea;">📋 Booking Details</h2>
+                    
+                    <div class="booking-detail">
+                        <span class="detail-label">Booking ID:</span>
+                        <span class="detail-value">${bookingData.transaction_ref}</span>
                     </div>
                     
-                    <div class="info-item">
-                        <div class="info-label">Room Type</div>
-                        <div class="info-value">${bookingData.room_type === 'entire' ? 'Entire Apartment' : bookingData.room_type}</div>
+                    <div class="booking-detail">
+                        <span class="detail-label">Room Type:</span>
+                        <span class="detail-value">${bookingData.room_type === 'entire' ? 'Entire Apartment' : bookingData.room_type}</span>
                     </div>
                     
-                    <div class="info-item">
-                        <div class="info-label">Check-in</div>
-                        <div class="info-value" style="font-size: 13px;">${checkIn}</div>
+                    <div class="booking-detail">
+                        <span class="detail-label">Check-in:</span>
+                        <span class="detail-value">${checkIn}</span>
                     </div>
                     
-                    <div class="info-item">
-                        <div class="info-label">Check-out</div>
-                        <div class="info-value" style="font-size: 13px;">${checkOut}</div>
+                    <div class="booking-detail">
+                        <span class="detail-label">Check-out:</span>
+                        <span class="detail-value">${checkOut}</span>
                     </div>
                     
-                    <div class="info-item">
-                        <div class="info-label">ID Type</div>
-                        <div class="info-value">${bookingData.id_type || 'N/A'}</div>
-                    </div>
-                    
-                    <div class="info-item">
-                        <div class="info-label">Payment Method</div>
-                        <div class="info-value">Paystack</div>
+                    <div class="booking-detail">
+                        <span class="detail-label">Number of Guests:</span>
+                        <span class="detail-value">${bookingData.guests}</span>
                     </div>
                 </div>
                 
-                <div class="revenue-box">
-                    <div style="font-size: 14px; opacity: 0.9;">💰 Revenue Received</div>
+                <div class="total-box">
+                    <div style="font-size: 14px; opacity: 0.9;">Total Amount Paid</div>
                     <div class="amount">₦${Number(bookingData.price).toLocaleString()}</div>
-                    <div style="font-size: 12px; opacity: 0.8; margin-top: 5px;">Payment Status: CONFIRMED ✓</div>
+                    <div style="font-size: 12px; opacity: 0.8; margin-top: 5px;">✓ Payment Confirmed</div>
                 </div>
                 
-                <div style="background-color: #fff9e6; padding: 20px; border-radius: 8px; border: 2px dashed #ffc107; margin-top: 20px;">
-                    <strong style="color: #ff6b6b;">📋 Action Required:</strong><br>
-                    <ul style="margin: 10px 0; padding-left: 20px; color: #666666;">
-                        <li>Prepare the ${bookingData.room_type === 'entire' ? 'entire apartment' : 'room'} for arrival</li>
-                        <li>Verify guest ID upon check-in</li>
-                        <li>Ensure all amenities are ready</li>
-                    </ul>
-                </div>
-                
-                ${bookingData.id_file_url ? `
-                <div style="margin-top: 20px; padding: 15px; background-color: #f8f9fa; border-radius: 8px;">
-                    <strong>📎 Guest ID Document:</strong><br>
-                    <a href="${bookingData.id_file_url}" style="color: #2ecc71; text-decoration: none; font-weight: 600;">
-                        View ID Document →
+                ${bookingData.verification_url ? `
+                <div style="background: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%); padding: 25px; border-radius: 8px; margin: 25px 0; text-align: center; color: #ffffff;">
+                    <h2 style="margin: 0 0 15px 0; color: #ffffff; font-size: 20px;">🔐 Identity Verification Required</h2>
+                    <p style="margin: 0 0 20px 0; font-size: 14px; opacity: 0.95;">
+                        To complete your booking, please verify your identity. This is a quick and secure process.
+                    </p>
+                    <a href="${bookingData.verification_url}"
+                       style="display: inline-block; background-color: #ffffff; color: #ff6b6b; padding: 15px 40px; text-decoration: none; border-radius: 30px; font-weight: 700; font-size: 16px; margin: 10px 0;">
+                        Complete Verification Now
                     </a>
+                    <p style="margin: 15px 0 0 0; font-size: 12px; opacity: 0.85;">
+                        ⏱️ Verification takes less than 2 minutes
+                    </p>
                 </div>
                 ` : ''}
+
+                <div class="highlight">
+                    <strong>📍 Important Information:</strong><br>
+                    • Check-in time: 2:00 PM<br>
+                    • Check-out time: 12:00 PM<br>
+                    • Please bring a valid ID for verification<br>
+                    • Your booking receipt is attached to this email
+                </div>
+
+                <div class="policy-box">
+                    <h3>📜 Cancellation Policy</h3>
+                    <ul>
+                        <li>
+                            <strong>Bookings made 1 week to check-in date:</strong><br>
+                            Full refund where cancellation made 72 hours before check-in. Forfeiture of the higher of first night payment or 50% of the total booking amount where cancellations made less than 72 hours to check-in date.
+                        </li>
+                        <li>
+                            <strong>Bookings made 2 weeks to check-in date:</strong><br>
+                            Full refund where cancellation made 5 days before check-in. Forfeiture of the higher of first night payment or 50% of the total booking amount where cancellations made less than 5 days to check-in date.
+                        </li>
+                        <li>
+                            <strong>Bookings made 1 month to check-in:</strong><br>
+                            Full refund where cancellation made 10 days before check-in. Forfeiture of the higher of first night payment or 50% of the total booking amount where cancellations made less than 10 days to check-in date.
+                        </li>
+                    </ul>
+                    <div class="policy-note">
+                        <strong>⚠️ Please Note:</strong> Same-day cancellations, no-shows, early check-outs or unused nights are non-refundable. See our website for the full Cancellation Policy.
+                    </div>
+                </div>
+
+                <div style="text-align: center;">
+                    <p style="color: #666666; margin-bottom: 10px;">Need to make changes or have questions?</p>
+                    <a href="mailto:${process.env.EMAIL_USER}" class="cta-button">Contact Us</a>
+                </div>
+              
             </div>
             
             <div class="footer">
-                <p style="margin: 5px 0;">© ${new Date().getFullYear()} Engeemos Bookastay Management System</p>
-                <p style="margin: 5px 0; font-size: 11px; color: #999999;">
-                    This is an automated notification. Login to your dashboard for more details.
-                </p>
+                <div style="margin-bottom: 20px;">
+                    <strong style="font-size: 16px;">Engeemos Bookastay Apartments</strong>
+                </div>
+                
+                <div class="social-links">
+                    <a href="tel:+2348166939592">📞 +234 816 693 9592</a> | 
+                    <a href="mailto:${process.env.EMAIL_USER}">✉️ ${process.env.EMAIL_USER}</a>
+                </div>
+                
+                <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #555555;">
+                    <p style="margin: 5px 0;">© ${new Date().getFullYear()} Engeemos Bookastay Apartments. All rights reserved.</p>
+                    <p style="margin: 5px 0; font-size: 11px; color: #999999;">
+                        This is an automated message. Please do not reply directly to this email.
+                    </p>
+                </div>
             </div>
         </div>
     </body>

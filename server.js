@@ -37,7 +37,8 @@ const allowedOrigins = [
   "http://localhost:5173",
   "https://bookastay-admin.vercel.app",
   "https://admin.bookastayng.com",
-  "https://bookastayng.com"
+  "https://bookastayng.com",
+  "http://localhost:5174"
   
 ];
 
