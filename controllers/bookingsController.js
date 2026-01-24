@@ -708,8 +708,13 @@ export const createBooking = async (req, res) => {
 // --- Confirm Booking (Paystack) ---
 export const confirmBooking = async (req, res) => {
   try {
-    console.log('=== CONFIRM BOOKING REQUEST ===');
+    console.log('');
+    console.log('==============================================');
+    console.log('=== CONFIRM BOOKING REQUEST RECEIVED ===');
+    console.log('==============================================');
+    console.log('Timestamp:', new Date().toISOString());
     console.log('Body keys:', Object.keys(req.body || {}));
+    console.log('Body values:', JSON.stringify(req.body || {}, null, 2));
     console.log('Has file:', !!req.file);
 
     const body = req.body || {};
@@ -732,7 +737,7 @@ export const confirmBooking = async (req, res) => {
 
     if (provider === 'paystack') {
       const payment_reference = body.payment_reference || body.transaction_ref || body.tx_ref || body.transaction_reference;
-      
+
       if (!payment_reference) {
         console.error('No payment reference provided');
         return res.status(400).json({ success: false, error: 'Payment reference is required' });
@@ -747,23 +752,21 @@ export const confirmBooking = async (req, res) => {
       }
 
       const verifyUrl = `https://api.paystack.co/transaction/verify/${encodeURIComponent(payment_reference)}`;
-      
-      console.log('Verifying payment with Paystack using axios...');
-      console.log('Verify URL:', verifyUrl);
-      
+
+      console.log('Verifying payment with Paystack...');
+
       let response;
-      
+
       try {
-        // Use axios with explicit timeout and headers
         response = await axios.get(verifyUrl, {
-          headers: { 
+          headers: {
             Authorization: `Bearer ${secret}`,
             'Content-Type': 'application/json',
             'Cache-Control': 'no-cache'
           },
-          timeout: 30000, // 30 second timeout
+          timeout: 30000,
           validateStatus: function (status) {
-            return status >= 200 && status < 500; // Don't throw on 4xx
+            return status >= 200 && status < 500;
           }
         });
 
@@ -778,8 +781,8 @@ export const confirmBooking = async (req, res) => {
           code: axiosError.code,
           response: axiosError.response?.data
         });
-        return res.status(500).json({ 
-          success: false, 
+        return res.status(500).json({
+          success: false,
           error: 'Failed to verify payment with Paystack',
           details: axiosError.message
         });
@@ -787,14 +790,15 @@ export const confirmBooking = async (req, res) => {
 
       if (response.status !== 200 || !response.data?.data || response.data.data.status !== 'success') {
         console.error('Payment verification failed:', response.data);
-        return res.status(400).json({ 
-          success: false, 
+        return res.status(400).json({
+          success: false,
           error: 'Payment verification failed',
           details: response.data?.message || 'Unknown error'
         });
       }
 
       console.log('Payment verified successfully');
+      const paidAmount = (response.data.data.amount || 0) / 100;
 
       const requestedRoom = body.room_type || 'entire';
       const checkIn = body.check_in_date || body.check_in;
@@ -814,7 +818,6 @@ export const confirmBooking = async (req, res) => {
 
       console.log('Room is available');
 
-      const paidAmount = (response.data.data.amount || 0) / 100;
       const clientPrice = Number(body.price || 0);
 
       const bookingPayload = {
@@ -892,12 +895,20 @@ export const confirmBooking = async (req, res) => {
       }
 
       // --- Generate PDF & Send Emails ---
+      console.log('');
+      console.log('========== EMAIL SENDING STARTED ==========');
+      console.log('Customer email:', bookingPayload.email);
+      console.log('Customer name:', bookingPayload.name);
+      console.log('Transaction ref:', bookingPayload.transaction_ref);
+
       const receiptsDir = './receipts';
       if (!fs.existsSync(receiptsDir)) {
         fs.mkdirSync(receiptsDir, { recursive: true });
+        console.log('Created receipts directory');
       }
 
       const pdfPath = path.join(receiptsDir, `${bookingPayload.transaction_ref}.pdf`);
+      console.log('PDF path:', pdfPath);
 
       // Add verification URL to booking payload for email
       const bookingDataWithVerification = {
@@ -907,20 +918,48 @@ export const confirmBooking = async (req, res) => {
 
       try {
         // IMPORTANT: Wait for PDF to be fully generated before sending email
+        console.log('Generating PDF receipt...');
         await generateReceiptPDF(bookingPayload, pdfPath);
         console.log('PDF receipt generated successfully');
+        console.log('PDF exists:', fs.existsSync(pdfPath));
+        console.log('PDF size:', fs.existsSync(pdfPath) ? fs.statSync(pdfPath).size + ' bytes' : 'N/A');
 
         // Send email to customer (with verification link if available)
+        console.log('');
+        console.log('--- Sending customer email ---');
+        console.log('To:', bookingPayload.email);
         await sendCustomerEmail(bookingPayload.email, bookingDataWithVerification, pdfPath);
-        console.log('Confirmation email sent to customer:', bookingPayload.email);
+        console.log('Customer email: SENT SUCCESSFULLY');
 
         // Send notification to client (property owner)
+        console.log('');
+        console.log('--- Sending client notification ---');
+        console.log('To:', process.env.CLIENT_NOTIFICATION_EMAIL || process.env.EMAIL_USER);
         await sendClientNotification(bookingDataWithVerification, pdfPath);
-        console.log('Notification email sent to property owner');
+        console.log('Client notification: SENT SUCCESSFULLY');
+
+        console.log('');
+        console.log('========== ALL EMAILS SENT ==========');
+        console.log('');
       } catch (emailErr) {
-        console.error('Failed to send email, but booking was created:', emailErr);
-        console.error('Email error details:', emailErr.message);
+        console.error('');
+        console.error('========== EMAIL ERROR ==========');
+        console.error('Failed to send email, but booking was created');
+        console.error('Error message:', emailErr.message);
+        console.error('Error code:', emailErr.code);
+        console.error('Error command:', emailErr.command);
+        console.error('Full error:', emailErr);
+        console.error('=================================');
+        console.error('');
       }
+
+      console.log('');
+      console.log('==============================================');
+      console.log('=== BOOKING CONFIRMATION COMPLETE ===');
+      console.log('Booking ID:', data?.id);
+      console.log('Customer email:', bookingPayload.email);
+      console.log('==============================================');
+      console.log('');
 
       return res.status(201).json({ success: true, data, message: 'Booking confirmed successfully!' });
     }
