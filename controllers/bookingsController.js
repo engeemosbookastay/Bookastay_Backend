@@ -16,15 +16,33 @@ const PRICE_ENTIRE_APARTMENT = 100000;
 const PRICE_SINGLE_ROOM = 60000;
 const MIN_NIGHTS_SINGLE_ROOM = 2;
 
-// --- Nodemailer transporter ---
+// --- Nodemailer transporter with debugging ---
 const transporter = nodemailer.createTransport({
     host: process.env.SMTP_HOST || '26.qservers.net',
-    port: process.env.SMTP_PORT || 465,
+    port: parseInt(process.env.SMTP_PORT) || 465,
     secure: true,
     auth: {
         user: process.env.EMAIL_USER,
         pass: process.env.EMAIL_PASS,
     },
+    tls: {
+        rejectUnauthorized: false // Allow self-signed certificates
+    },
+    connectionTimeout: 10000,
+    greetingTimeout: 10000,
+    socketTimeout: 15000,
+});
+
+// Verify transporter on startup
+transporter.verify((error, success) => {
+    if (error) {
+        console.error('EMAIL CONFIG ERROR:', error.message);
+        console.error('  Host:', process.env.SMTP_HOST);
+        console.error('  Port:', process.env.SMTP_PORT);
+        console.error('  User:', process.env.EMAIL_USER);
+    } else {
+        console.log('Email server ready - connected to', process.env.SMTP_HOST);
+    }
 });
 
 // --- PDF Generation (returns Promise to ensure file is ready before email) ---
@@ -407,45 +425,64 @@ const generateClientEmailHTML = (bookingData) => {
 
 // --- Send Booking Email to Customer ---
 const sendCustomerEmail = async (toEmail, bookingData, pdfPath) => {
+    console.log('Sending customer email to:', toEmail);
+    console.log('PDF attachment:', pdfPath);
+
     const mailOptions = {
         from: `"Engeemos Bookastay" <${process.env.EMAIL_USER}>`,
         to: toEmail,
-        subject: '🎉 Booking Confirmed - Engeemos Bookastay',
+        subject: 'Booking Confirmed - Engeemos Bookastay',
         html: generateCustomerEmailHTML(bookingData),
-        attachments: pdfPath ? [
-            { 
-                filename: `Booking_Receipt_${bookingData.transaction_ref}.pdf`, 
-                path: pdfPath 
+        attachments: pdfPath && fs.existsSync(pdfPath) ? [
+            {
+                filename: `Booking_Receipt_${bookingData.transaction_ref}.pdf`,
+                path: pdfPath
             }
         ] : [],
     };
 
-    const info = await transporter.sendMail(mailOptions);
-    console.log('Customer email sent: ', info.messageId);
-    return info;
+    try {
+        const info = await transporter.sendMail(mailOptions);
+        console.log('Customer email sent successfully:', info.messageId);
+        return info;
+    } catch (error) {
+        console.error('CUSTOMER EMAIL FAILED:');
+        console.error('  Error:', error.message);
+        console.error('  Code:', error.code);
+        console.error('  To:', toEmail);
+        throw error;
+    }
 };
 
 // --- Send Booking Notification to Client (Property Owner) ---
 const sendClientNotification = async (bookingData, pdfPath) => {
-    // Client email - should be in your .env as CLIENT_NOTIFICATION_EMAIL
     const clientEmail = process.env.CLIENT_NOTIFICATION_EMAIL || process.env.EMAIL_USER;
-    
+    console.log('Sending client notification to:', clientEmail);
+
     const mailOptions = {
         from: `"Engeemos Bookastay System" <${process.env.EMAIL_USER}>`,
         to: clientEmail,
-        subject: ` New Booking: ${bookingData.name} - ₦${Number(bookingData.price).toLocaleString()}`,
+        subject: `New Booking: ${bookingData.name} - N${Number(bookingData.price).toLocaleString()}`,
         html: generateClientEmailHTML(bookingData),
-        attachments: pdfPath ? [
-            { 
-                filename: `Booking_Receipt_${bookingData.transaction_ref}.pdf`, 
-                path: pdfPath 
+        attachments: pdfPath && fs.existsSync(pdfPath) ? [
+            {
+                filename: `Booking_Receipt_${bookingData.transaction_ref}.pdf`,
+                path: pdfPath
             }
         ] : [],
     };
 
-    const info = await transporter.sendMail(mailOptions);
-    console.log('Client notification sent: ', info.messageId);
-    return info;
+    try {
+        const info = await transporter.sendMail(mailOptions);
+        console.log('Client notification sent successfully:', info.messageId);
+        return info;
+    } catch (error) {
+        console.error('CLIENT NOTIFICATION FAILED:');
+        console.error('  Error:', error.message);
+        console.error('  Code:', error.code);
+        console.error('  To:', clientEmail);
+        throw error;
+    }
 };
 
 // --- Utilities ---
