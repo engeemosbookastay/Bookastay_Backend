@@ -27,22 +27,64 @@ const transporter = nodemailer.createTransport({
     },
 });
 
-// --- PDF Generation ---
+// --- PDF Generation (returns Promise to ensure file is ready before email) ---
 const generateReceiptPDF = (bookingData, outputPath) => {
-    const doc = new PDFDocument();
-    doc.pipe(fs.createWriteStream(outputPath));
+    return new Promise((resolve, reject) => {
+        try {
+            const doc = new PDFDocument();
+            const stream = fs.createWriteStream(outputPath);
 
-    doc.fontSize(20).text('Booking Confirmation', { align: 'center' });
-    doc.moveDown();
-    doc.fontSize(14).text(`Booking ID: ${bookingData.transaction_ref}`);
-    doc.text(`Name: ${bookingData.name}`);
-    doc.text(`Room: ${bookingData.room_type}`);
-    doc.text(`Check-in: ${bookingData.check_in}`);
-    doc.text(`Check-out: ${bookingData.check_out}`);
-    doc.text(`Guests: ${bookingData.guests}`);
-    doc.text(`Total Paid: ₦${bookingData.price}`);
+            // Wait for stream to finish writing
+            stream.on('finish', () => {
+                console.log('PDF generated successfully:', outputPath);
+                resolve(outputPath);
+            });
 
-    doc.end();
+            stream.on('error', (err) => {
+                console.error('PDF stream error:', err);
+                reject(err);
+            });
+
+            doc.pipe(stream);
+
+            // Header
+            doc.fontSize(24).fillColor('#667eea').text('Engeemos Bookastay', { align: 'center' });
+            doc.fontSize(10).fillColor('#666666').text('...hosting temporary stay in exotic style', { align: 'center' });
+            doc.moveDown(2);
+
+            // Title
+            doc.fontSize(20).fillColor('#333333').text('Booking Confirmation', { align: 'center' });
+            doc.moveDown();
+
+            // Booking Details
+            doc.fontSize(12).fillColor('#333333');
+            doc.text(`Booking ID: ${bookingData.transaction_ref}`);
+            doc.text(`Name: ${bookingData.name}`);
+            doc.text(`Email: ${bookingData.email}`);
+            doc.text(`Phone: ${bookingData.phone || 'N/A'}`);
+            doc.moveDown();
+
+            doc.text(`Room Type: ${bookingData.room_type === 'entire' ? 'Entire Apartment' : bookingData.room_type}`);
+            doc.text(`Check-in: ${new Date(bookingData.check_in).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}`);
+            doc.text(`Check-out: ${new Date(bookingData.check_out).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}`);
+            doc.text(`Number of Guests: ${bookingData.guests}`);
+            doc.moveDown();
+
+            // Payment
+            doc.fontSize(16).fillColor('#667eea').text(`Total Paid: N${Number(bookingData.price).toLocaleString()}`, { align: 'center' });
+            doc.fontSize(10).fillColor('#28a745').text('Payment Confirmed', { align: 'center' });
+            doc.moveDown(2);
+
+            // Footer
+            doc.fontSize(10).fillColor('#999999').text('Thank you for choosing Engeemos Bookastay!', { align: 'center' });
+            doc.text('Check-in: 2:00 PM | Check-out: 12:00 PM', { align: 'center' });
+
+            doc.end();
+        } catch (err) {
+            console.error('PDF generation error:', err);
+            reject(err);
+        }
+    });
 };
 
 // --- Generate HTML Email Template for Customer ---
@@ -421,10 +463,11 @@ const calculateNights = (check_in, check_out) => {
 };
 
 // --- Overlap Helper ---
+// Only checks against 'confirmed' and 'blocked' bookings (not pending 'booked' ones)
 const checkRangeOverlap = async (room_type, check_in, check_out) => {
   const requestedIn = parseDate(check_in);
   const requestedOut = parseDate(check_out);
-  
+
   if (!requestedIn || !requestedOut || requestedOut <= requestedIn) {
     return { overlapping: true, blocking: null, message: 'Invalid date range' };
   }
@@ -432,20 +475,24 @@ const checkRangeOverlap = async (room_type, check_in, check_out) => {
   const inISO = requestedIn.toISOString();
   const outISO = requestedOut.toISOString();
 
+  // Status filter: only check against confirmed/blocked bookings
+  const activeStatuses = ['confirmed', 'blocked'];
+
   if ((room_type || '').toLowerCase() === 'entire') {
     const { data, error } = await supabaseAdmin
       .from('bookings')
-      .select('id, room_type, check_in, check_out, name')
+      .select('id, room_type, check_in, check_out, name, status')
+      .in('status', activeStatuses)
       .lt('check_in', outISO)
       .gt('check_out', inISO)
       .limit(1);
 
     if (error) throw error;
-    
+
     if (Array.isArray(data) && data.length > 0) {
       const blocking = data[0];
-      return { 
-        overlapping: true, 
+      return {
+        overlapping: true,
         blocking,
         message: `Entire apartment is booked from ${new Date(blocking.check_in).toLocaleDateString()} to ${new Date(blocking.check_out).toLocaleDateString()}`
       };
@@ -453,39 +500,43 @@ const checkRangeOverlap = async (room_type, check_in, check_out) => {
     return { overlapping: false, blocking: null };
   }
 
+  // Check if entire apartment is booked (blocks all rooms)
   const { data: entireData, error: entireErr } = await supabaseAdmin
     .from('bookings')
-    .select('id, room_type, check_in, check_out, name')
+    .select('id, room_type, check_in, check_out, name, status')
     .ilike('room_type', 'entire')
+    .in('status', activeStatuses)
     .lt('check_in', outISO)
     .gt('check_out', inISO)
     .limit(1);
 
   if (entireErr) throw entireErr;
-  
+
   if (Array.isArray(entireData) && entireData.length > 0) {
     const blocking = entireData[0];
-    return { 
-      overlapping: true, 
+    return {
+      overlapping: true,
       blocking,
       message: `Entire apartment is booked from ${new Date(blocking.check_in).toLocaleDateString()} to ${new Date(blocking.check_out).toLocaleDateString()}`
     };
   }
 
+  // Check specific room
   const { data, error } = await supabaseAdmin
     .from('bookings')
-    .select('id, room_type, check_in, check_out, name')
+    .select('id, room_type, check_in, check_out, name, status')
     .ilike('room_type', room_type)
+    .in('status', activeStatuses)
     .lt('check_in', outISO)
     .gt('check_out', inISO)
     .limit(1);
 
   if (error) throw error;
-  
+
   if (Array.isArray(data) && data.length > 0) {
     const blocking = data[0];
-    return { 
-      overlapping: true, 
+    return {
+      overlapping: true,
       blocking,
       message: `${room_type} is booked from ${new Date(blocking.check_in).toLocaleDateString()} to ${new Date(blocking.check_out).toLocaleDateString()}`
     };
@@ -746,6 +797,7 @@ export const confirmBooking = async (req, res) => {
         provider: 'paystack',
         paid_amount: paidAmount,
         status: 'confirmed',
+        source: 'website',  // Mark as website booking (not Airbnb)
       };
 
       console.log('Creating booking with payload:', {
@@ -809,7 +861,6 @@ export const confirmBooking = async (req, res) => {
       }
 
       const pdfPath = path.join(receiptsDir, `${bookingPayload.transaction_ref}.pdf`);
-      generateReceiptPDF(bookingPayload, pdfPath);
 
       // Add verification URL to booking payload for email
       const bookingDataWithVerification = {
@@ -818,6 +869,10 @@ export const confirmBooking = async (req, res) => {
       };
 
       try {
+        // IMPORTANT: Wait for PDF to be fully generated before sending email
+        await generateReceiptPDF(bookingPayload, pdfPath);
+        console.log('PDF receipt generated successfully');
+
         // Send email to customer (with verification link if available)
         await sendCustomerEmail(bookingPayload.email, bookingDataWithVerification, pdfPath);
         console.log('Confirmation email sent to customer:', bookingPayload.email);
@@ -827,9 +882,10 @@ export const confirmBooking = async (req, res) => {
         console.log('Notification email sent to property owner');
       } catch (emailErr) {
         console.error('Failed to send email, but booking was created:', emailErr);
+        console.error('Email error details:', emailErr.message);
       }
 
-      return res.status(201).json({ success: true, data });
+      return res.status(201).json({ success: true, data, message: 'Booking confirmed successfully!' });
     }
 
     console.error('Unsupported provider:', provider);
