@@ -9,10 +9,6 @@ import PDFDocument from 'pdfkit';
 import axios from 'axios';
 import { createVerificationRequest } from '../services/shuftiProClient.js';
 
-const pdfPath = `./receipts/${bookingPayload.transaction_ref}.pdf`;
-
-await generateReceiptPDF(bookingPayload, pdfPath); // MUST await
-await sendBookingEmail(bookingPayload.email, bookingPayload, pdfPath);
 
 
 const CLEANING_FEE = 20000;
