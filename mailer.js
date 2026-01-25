@@ -6,21 +6,11 @@ import PDFDocument from 'pdfkit';
 
 // --- 1. Email transporter ---
 const transporter = nodemailer.createTransport({
-    host: process.env.SMTP_HOST || '26.qservers.net',
-    port: Number(process.env.SMTP_PORT) || 587,
-    secure: process.env.SMTP_PORT === '465', // true for 465, false for 587
+    service: 'gmail',
     auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS,
+        user: process.env.GMAIL_USER,
+        pass: process.env.GMAIL_APP_PASSWORD,
     },
-    connectionTimeout: 30000, // 30 seconds
-    greetingTimeout: 30000,
-    socketTimeout: 30000,
-    logger: true,
-    debug: true,
-    tls: {
-        rejectUnauthorized: false // Try this if you get certificate errors
-    }
 });
 
 // Optional but very useful for debugging
@@ -81,7 +71,7 @@ export async function sendBookingEmail(toEmail, bookingData, pdfPath) {
             : [];
 
     const mailOptions = {
-        from: `"Engeemos Bookastay" <${process.env.EMAIL_USER}>`,
+        from: `"Engeemos Bookastay" <${process.env.GMAIL_USER}>`,
         to: toEmail,
         subject: 'Booking Confirmation - Engeemos Bookastay',
         text: `Hello ${bookingData.name},
@@ -95,18 +85,11 @@ Engeemos Bookastay`,
 
     try {
         console.log('Attempting to send email to:', toEmail);
-        console.log('Using SMTP:', process.env.SMTP_HOST, 'Port:', process.env.SMTP_PORT);
         const info = await transporter.sendMail(mailOptions);
         console.log('Email sent successfully:', info.messageId);
         return info;
     } catch (err) {
         console.error('Error sending email:', err);
-        console.error('Error details:', {
-            code: err.code,
-            command: err.command,
-            response: err.response,
-            responseCode: err.responseCode,
-        });
         throw err;
     }
 }
