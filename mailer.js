@@ -8,11 +8,16 @@ import PDFDocument from 'pdfkit';
 const transporter = nodemailer.createTransport({
     host: process.env.SMTP_HOST || '26.qservers.net',
     port: Number(process.env.SMTP_PORT) || 465,
-    secure: true, // SSL
+    secure: true, // SSL for port 465
     auth: {
         user: process.env.EMAIL_USER,
         pass: process.env.EMAIL_PASS,
     },
+    connectionTimeout: 15000, // 15 seconds
+    greetingTimeout: 15000,
+    socketTimeout: 15000,
+    logger: true, // Enable logging for debugging
+    debug: process.env.NODE_ENV !== 'production', // Debug in development only
 });
 
 // Optional but very useful for debugging
@@ -86,11 +91,18 @@ Engeemos Bookastay`,
     };
 
     try {
+        console.log('Attempting to send email to:', toEmail);
         const info = await transporter.sendMail(mailOptions);
         console.log('Email sent successfully:', info.messageId);
         return info;
     } catch (err) {
         console.error('Error sending email:', err);
+        console.error('Error details:', {
+            code: err.code,
+            command: err.command,
+            response: err.response,
+            responseCode: err.responseCode,
+        });
         throw err;
     }
 }
