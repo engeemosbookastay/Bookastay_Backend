@@ -7,17 +7,20 @@ import PDFDocument from 'pdfkit';
 // --- 1. Email transporter ---
 const transporter = nodemailer.createTransport({
     host: process.env.SMTP_HOST || '26.qservers.net',
-    port: Number(process.env.SMTP_PORT) || 465,
-    secure: true, // SSL for port 465
+    port: Number(process.env.SMTP_PORT) || 587,
+    secure: process.env.SMTP_PORT === '465', // true for 465, false for 587
     auth: {
         user: process.env.EMAIL_USER,
         pass: process.env.EMAIL_PASS,
     },
-    connectionTimeout: 15000, // 15 seconds
-    greetingTimeout: 15000,
-    socketTimeout: 15000,
-    logger: true, // Enable logging for debugging
-    debug: process.env.NODE_ENV !== 'production', // Debug in development only
+    connectionTimeout: 30000, // 30 seconds
+    greetingTimeout: 30000,
+    socketTimeout: 30000,
+    logger: true,
+    debug: true,
+    tls: {
+        rejectUnauthorized: false // Try this if you get certificate errors
+    }
 });
 
 // Optional but very useful for debugging
@@ -92,6 +95,7 @@ Engeemos Bookastay`,
 
     try {
         console.log('Attempting to send email to:', toEmail);
+        console.log('Using SMTP:', process.env.SMTP_HOST, 'Port:', process.env.SMTP_PORT);
         const info = await transporter.sendMail(mailOptions);
         console.log('Email sent successfully:', info.messageId);
         return info;
