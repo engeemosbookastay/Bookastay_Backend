@@ -452,6 +452,30 @@ const sendClientNotification = async (bookingData, pdfPath) => {
 };
 
 // ============================================
+// GOOGLE SHEETS INTEGRATION
+// ============================================
+const sendToGoogleSheet = async (bookingData) => {
+    const webhookUrl = process.env.GOOGLE_SHEET_WEBHOOK_URL;
+    if (!webhookUrl || webhookUrl === 'YOUR_APPS_SCRIPT_WEB_APP_URL_HERE') {
+        console.log('⚠️ Google Sheet webhook URL not configured, skipping...');
+        return null;
+    }
+
+    try {
+        console.log('📊 Sending booking data to Google Sheet...');
+        const response = await axios.post(webhookUrl, bookingData, {
+            headers: { 'Content-Type': 'application/json' },
+            timeout: 30000,
+        });
+        console.log('✅ Google Sheet updated:', response.data);
+        return response.data;
+    } catch (err) {
+        console.error('❌ Google Sheet error:', err.message);
+        return null;
+    }
+};
+
+// ============================================
 // UTILITIES
 // ============================================
 const parseDate = (dateString) => {
@@ -788,42 +812,19 @@ export const confirmBooking = async (req, res) => {
                 console.error('⚠️ Verification failed (non-critical):', verificationErr.message);
             }
 
-            // --- GENERATE PDF & SEND EMAILS ---
-            console.log('');
-            console.log('=== EMAIL SENDING STARTED ===');
-
-            const receiptsDir = './receipts';
-            if (!fs.existsSync(receiptsDir)) {
-                fs.mkdirSync(receiptsDir, { recursive: true });
-            }
-
-            const pdfPath = path.join(receiptsDir, `${bookingPayload.transaction_ref}.pdf`);
-
+            // --- SEND TO GOOGLE SHEET (stores data + sends emails via Apps Script) ---
             const bookingDataWithVerification = {
                 ...bookingPayload,
                 verification_url: verificationUrl
             };
 
             try {
-                // ✅ IMPORTANT: Wait for PDF generation
-                console.log('Generating PDF...');
-                await generateReceiptPDF(bookingPayload, pdfPath);
-                console.log('✅ PDF generated');
-
-                // Send customer email
-                console.log('Sending customer email...');
-                await sendCustomerEmail(bookingPayload.email, bookingDataWithVerification, pdfPath);
-                console.log('✅ Customer email sent');
-
-                // Send client notification
-                console.log('Sending client notification...');
-                await sendClientNotification(bookingDataWithVerification, pdfPath);
-                console.log('✅ Client notification sent');
-
-                console.log('=== ALL EMAILS SENT SUCCESSFULLY ===');
-            } catch (emailErr) {
-                console.error('❌ EMAIL ERROR:', emailErr.message);
-                // Don't fail the booking - it's already created
+                console.log('');
+                console.log('=== SENDING TO GOOGLE SHEET + APPS SCRIPT EMAILS ===');
+                await sendToGoogleSheet(bookingDataWithVerification);
+                console.log('=== GOOGLE SHEET + EMAILS DONE ===');
+            } catch (sheetErr) {
+                console.error('❌ Google Sheet error (non-critical):', sheetErr.message);
             }
 
             console.log('=== CONFIRM BOOKING COMPLETED ===');
