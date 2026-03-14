@@ -196,10 +196,16 @@ export const getAllBookingsAdmin = async (req, res) => {
       const adminBlocks = data.filter(b => b.status === 'blocked');
       const userBookings = data.filter(b => b.status !== 'blocked');
 
+      // Annotate each record with booking_type so the frontend can filter reliably
+      const annotated = data.map(b => ({
+        ...b,
+        booking_type: b.status === 'blocked' ? 'admin' : 'user',
+      }));
+
       res.status(200).json({
         success: true,
         bookings: {
-          all: data,
+          all: annotated,
           users: userBookings,
           adminBlocks,
         },

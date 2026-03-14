@@ -525,10 +525,11 @@ const checkRangeOverlap = async (room_type, check_in, check_out) => {
         return { overlapping: false, blocking: null };
     }
 
+    // Check for entire-apartment blocks (handles both 'entire' and '2bedroom' aliases)
     const { data: entireData, error: entireErr } = await supabaseAdmin
         .from('bookings')
         .select('id, room_type, check_in, check_out, name, status')
-        .ilike('room_type', 'entire')
+        .or('room_type.ilike.entire,room_type.ilike.2bedroom')
         .in('status', activeStatuses)
         .lt('check_in', outISO)
         .gt('check_out', inISO)
@@ -576,7 +577,7 @@ export const listBookingDates = async (req, res) => {
         const { data, error } = await supabaseAdmin
             .from('bookings')
             .select('check_in, check_out, room_type, status')
-            .in('status', ['booked', 'confirmed']);
+            .in('status', ['booked', 'confirmed', 'blocked']);
 
         if (error) throw error;
 
