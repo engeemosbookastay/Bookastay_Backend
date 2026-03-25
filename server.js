@@ -10,19 +10,43 @@ import contactRoutes from './routes/contact.js';
 import userRoutes from './routes/user.js';
 import calendarRoutes from './routes/calendar.js';
 import { supabase, connectSupabase } from './services/supabase.js';
-
 import shuftiProRoutes from './routes/shuftiproroutes.js';
-
 
 dotenv.config();
 
 const app = express();
+
+const allowedOrigins = [
+  "http://localhost:5173",
+  "http://localhost:5175",
+  "http://localhost:5177",
+  "https://book-astay.vercel.app",
+  "https://booka-stay.vercel.app",
+  "https://bookastay-admin.vercel.app",
+  "https://admin.bookastayng.com",
+  "https://bookastayng.com",
+  "https://www.bookastayng.com",
+];
+
+const corsOptions = {
+  origin: (origin, callback) => {
+    // Allow requests with no origin (curl, Postman, server-to-server)
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error(`CORS: origin ${origin} not allowed`));
+    }
+  },
+  credentials: true,
+};
+
+// Apply CORS before everything else so even error responses carry the header
+app.use(cors(corsOptions));
+// Handle pre-flight OPTIONS for all routes
+app.options('*', cors(corsOptions));
+
 app.use(express.json());
 app.use(cookieParser());
-
-// const CLIENT_ORIGIN = process.env.CLIENT_ORIGIN || 'https://book-astay.vercel.app';
-// app.use(cors({ origin: CLIENT_ORIGIN, credentials: true }));
-
 
 // Run every 10 minutes
 cron.schedule('*/10 * * * *', () => {
@@ -34,35 +58,10 @@ cron.schedule('*/10 * * * *', () => {
 cron.schedule('*/14 * * * *', async () => {
   const selfUrl = process.env.RENDER_EXTERNAL_URL || `http://localhost:${process.env.PORT || 4000}`;
   try {
-    const { default: https } = await import(selfUrl.startsWith('https') ? 'https' : 'http');
-    https.get(`${selfUrl}/`, () => {}).on('error', () => {});
+    const mod = await import(selfUrl.startsWith('https') ? 'https' : 'http');
+    mod.default.get(`${selfUrl}/`, () => {}).on('error', () => {});
   } catch {}
 });
-
-const allowedOrigins = [
-  "http://localhost:5175",
-  "https://book-astay.vercel.app",
-  "https://booka-stay.vercel.app",
-  "http://localhost:5173",
-  "https://bookastay-admin.vercel.app",
-  "https://admin.bookastayng.com",
-  "https://bookastayng.com",
-  "https://www.bookastayng.com",
-  "http://localhost:5177"
-];
-
-app.use(
-  cors({
-    origin: (origin, callback) => {
-      if (!origin || allowedOrigins.includes(origin)) {
-        callback(null, true);
-      } else {
-        callback(new Error("Not allowed by CORS"));
-      }
-    },
-    credentials: true,
-  })
-);
 
 app.get('/', (req, res) => res.json({ status: 'ok' }));
 app.use('/api', bookingsRoutes);
@@ -72,17 +71,28 @@ app.use('/auth', userRoutes);
 app.use('/api/calendar', calendarRoutes);
 app.use('/api/shufti', shuftiProRoutes);
 
+// Global error handler — must stay last and must re-apply CORS header
+// so browsers don't see a CORS failure when a route throws a 500
+app.use((err, req, res, _next) => {
+  const origin = req.headers.origin;
+  if (origin && allowedOrigins.includes(origin)) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+    res.setHeader('Access-Control-Allow-Credentials', 'true');
+  }
+  console.error('Unhandled error:', err.message || err);
+  res.status(500).json({ success: false, message: err.message || 'Internal server error' });
+});
+
 const port = process.env.PORT || 4000;
 
 async function start() {
-  // Try to connect to Supabase tables; connectSupabase will exit on failure
   try {
     const res = await connectSupabase();
     if (!res.ok) {
-      console.warn('Supabase connection: Contact table missing or schema mismatch. Contact endpoint will fall back to local storage.');
+      console.warn('Supabase connection: Contact table missing or schema mismatch.');
     }
   } catch (err) {
-    console.error('FATAL: Supabase startup check failed (auth/network):', err.message || err);
+    console.error('FATAL: Supabase startup check failed:', err.message || err);
     process.exit(1);
   }
 
