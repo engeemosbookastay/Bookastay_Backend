@@ -30,6 +30,15 @@ cron.schedule('*/10 * * * *', () => {
   syncFromAirbnb();
 });
 
+// Ping self every 14 minutes to prevent Render free tier cold starts
+cron.schedule('*/14 * * * *', async () => {
+  const selfUrl = process.env.RENDER_EXTERNAL_URL || `http://localhost:${process.env.PORT || 4000}`;
+  try {
+    const { default: https } = await import(selfUrl.startsWith('https') ? 'https' : 'http');
+    https.get(`${selfUrl}/`, () => {}).on('error', () => {});
+  } catch {}
+});
+
 const allowedOrigins = [
   "http://localhost:5175",
   "https://book-astay.vercel.app",
@@ -38,8 +47,8 @@ const allowedOrigins = [
   "https://bookastay-admin.vercel.app",
   "https://admin.bookastayng.com",
   "https://bookastayng.com",
+  "https://www.bookastayng.com",
   "http://localhost:5177"
-  
 ];
 
 app.use(
