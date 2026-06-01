@@ -20,6 +20,10 @@ router.post('/payments', controller.simulatePayment);
 // parse FormData including file field 'id_file' for confirm endpoint
 router.post('/bookings/confirm', upload.single('id_file'), controller.confirmBooking);
 
+// PayPal payment routes
+router.post('/bookings/paypal/create-order', controller.createPayPalOrder);
+router.post('/bookings/paypal/capture-order', controller.capturePayPalOrder);
+
 router.get('/bookings/:id', controller.getBooking);
 
 export default router;

@@ -7,7 +7,7 @@ import fs from 'fs';
 import path from 'path';
 import PDFDocument from 'pdfkit';
 import axios from 'axios';
-import { createVerificationRequest } from '../services/shuftiProClient.js';
+import { incrementDiscountUsage } from './discountsController.js';
 
 
 
@@ -17,6 +17,20 @@ const EXTRA_GUEST_PER_NIGHT = 5000;
 const PRICE_ENTIRE_APARTMENT = 100000;
 const PRICE_SINGLE_ROOM = 60000;
 const MIN_NIGHTS_SINGLE_ROOM = 2;
+
+// Fetch live price from property_settings, fall back to hardcoded
+const getPropertyPrice = async (room_type) => {
+    try {
+        const { data } = await supabaseAdmin
+            .from('property_settings')
+            .select('base_price, min_nights, max_guests')
+            .eq('room_key', room_type || 'entire')
+            .single();
+        return data || null;
+    } catch {
+        return null;
+    }
+};
 
 // ============================================
 // EMAIL CONFIGURATION (WORKING VERSION)
@@ -692,13 +706,13 @@ export const createBooking = async (req, res) => {
 };
 
 // ============================================
-// CONFIRM BOOKING (WITH EMAIL + VERIFICATION)
+// CONFIRM BOOKING (Paystack, Klump, Deposit)
 // ============================================
 export const confirmBooking = async (req, res) => {
     try {
         console.log('');
         console.log('=== CONFIRM BOOKING STARTED ===');
-        
+
         const body = req.body || {};
 
         // Handle ID file upload
@@ -714,29 +728,54 @@ export const confirmBooking = async (req, res) => {
         }
 
         const provider = (body.provider || '').toLowerCase();
+        const payment_type = body.payment_type || 'full';
+        const deposit_percentage = Number(body.deposit_percentage) || 100;
+        const discount_code = body.discount_code || null;
+        const discount_amount_client = Number(body.discount_amount) || 0;
 
-        if (provider === 'paystack') {
+        if (provider === 'paystack' || provider === 'klump') {
             const payment_reference = body.payment_reference || body.transaction_ref;
-
             if (!payment_reference) {
                 return res.status(400).json({ success: false, error: 'Payment reference is required' });
             }
 
-            // Verify payment
-            console.log('Verifying payment...');
-            const response = await axios.get(
-                `https://api.paystack.co/transaction/verify/${encodeURIComponent(payment_reference)}`,
-                {
-                    headers: { Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}` },
-                    timeout: 30000
+            let paidAmount = 0;
+
+            if (provider === 'paystack') {
+                console.log('Verifying Paystack payment...');
+                const response = await axios.get(
+                    `https://api.paystack.co/transaction/verify/${encodeURIComponent(payment_reference)}`,
+                    {
+                        headers: { Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}` },
+                        timeout: 30000
+                    }
+                );
+                if (response.status !== 200 || response.data?.data?.status !== 'success') {
+                    return res.status(400).json({ success: false, error: 'Payment verification failed' });
                 }
-            );
-
-            if (response.status !== 200 || response.data?.data?.status !== 'success') {
-                return res.status(400).json({ success: false, error: 'Payment verification failed' });
+                paidAmount = (response.data.data.amount || 0) / 100;
+                console.log('✅ Paystack payment verified, amount:', paidAmount);
+            } else if (provider === 'klump') {
+                console.log('Verifying Klump payment...');
+                try {
+                    const klumpResponse = await axios.get(
+                        `https://merchant.useklump.com/api/v1/transactions/${encodeURIComponent(payment_reference)}`,
+                        {
+                            headers: { Authorization: `Bearer ${process.env.KLUMP_SECRET_KEY}` },
+                            timeout: 30000
+                        }
+                    );
+                    const klumpData = klumpResponse.data?.data || {};
+                    if (klumpData.status !== 'successful' && klumpData.status !== 'completed') {
+                        return res.status(400).json({ success: false, error: 'Klump payment not successful' });
+                    }
+                    paidAmount = Number(klumpData.amount) || Number(body.price) || 0;
+                    console.log('✅ Klump payment verified, amount:', paidAmount);
+                } catch (klumpErr) {
+                    console.error('Klump verification error:', klumpErr.message);
+                    return res.status(400).json({ success: false, error: 'Failed to verify Klump payment' });
+                }
             }
-
-            console.log('✅ Payment verified');
 
             // Check availability
             const requestedRoom = body.room_type || 'entire';
@@ -747,15 +786,31 @@ export const confirmBooking = async (req, res) => {
             if (overlapCheck.overlapping) {
                 return res.status(409).json({ success: false, error: overlapCheck.message });
             }
-
             console.log('✅ Room available');
 
-            const paidAmount = (response.data.data.amount || 0) / 100;
+            // Fetch live price from DB if available
+            const propSettings = await getPropertyPrice(requestedRoom);
+            const nights = calculateNights(checkIn, checkOut);
+            const basePricePerNight = propSettings?.base_price ||
+                (requestedRoom.toLowerCase() === 'entire' ? PRICE_ENTIRE_APARTMENT : PRICE_SINGLE_ROOM);
+            const guests = Number(body.guests) || 1;
+            const extraGuestFee = guests > 2 ? (guests - 2) * EXTRA_GUEST_PER_NIGHT * nights : 0;
+            const fullPrice = basePricePerNight * nights + CLEANING_FEE + SERVICE_FEE + extraGuestFee;
+
+            // Apply discount
+            const discount_amount = discount_amount_client; // already validated on frontend
+            const priceAfterDiscount = Math.max(0, fullPrice - discount_amount);
+
+            // Deposit logic
+            let balance_due = 0;
+            if (payment_type === 'deposit') {
+                balance_due = Math.max(0, priceAfterDiscount - paidAmount);
+            }
 
             const bookingPayload = {
                 user_id: body.user_id || process.env.GUEST_USER_ID || uuidv4(),
-                room_type: body.room_type || 'entire',
-                guests: body.guests || 1,
+                room_type: requestedRoom,
+                guests,
                 check_in: checkIn,
                 check_out: checkOut,
                 name: body.name || 'Guest User',
@@ -763,16 +818,21 @@ export const confirmBooking = async (req, res) => {
                 phone: body.phone || null,
                 id_type: body.id_type || null,
                 id_file_url: body.id_file_url,
-                price: Number(body.price) || paidAmount,
+                price: priceAfterDiscount,
+                original_price: fullPrice,
+                discount_code: discount_code || null,
+                discount_amount,
+                payment_type,
+                deposit_percentage,
+                balance_due,
                 payment_status: 'paid',
                 transaction_ref: payment_reference,
-                provider: 'paystack',
+                provider,
                 paid_amount: paidAmount,
                 status: 'confirmed',
                 source: 'website',
             };
 
-            // Create booking
             const { data, error } = await supabaseAdmin
                 .from('bookings')
                 .insert([bookingPayload])
@@ -780,49 +840,17 @@ export const confirmBooking = async (req, res) => {
                 .maybeSingle();
 
             if (error) throw error;
-
             console.log('✅ Booking created:', data?.id);
 
-            // --- SHUFTI PRO VERIFICATION ---
-            let verificationUrl = null;
-
-            try {
-                console.log('Starting verification...');
-                const verificationResult = await createVerificationRequest({
-                    name: bookingPayload.name,
-                    email: bookingPayload.email,
-                    bookingReference: payment_reference
-                });
-
-                if (verificationResult.success) {
-                    verificationUrl = verificationResult.verification_url;
-
-                    await supabaseAdmin
-                        .from('bookings')
-                        .update({
-                            verification_reference: verificationResult.reference,
-                            verification_status: 'pending',
-                            verification_url: verificationUrl,
-                            verification_event: 'request.pending'
-                        })
-                        .eq('id', data.id);
-
-                    console.log('✅ Verification initiated');
-                }
-            } catch (verificationErr) {
-                console.error('⚠️ Verification failed (non-critical):', verificationErr.message);
+            // Increment discount code usage
+            if (discount_code) {
+                await incrementDiscountUsage(discount_code).catch(() => {});
             }
 
-            // --- SEND TO GOOGLE SHEET (stores data + sends emails via Apps Script) ---
-            const bookingDataWithVerification = {
-                ...bookingPayload,
-                verification_url: verificationUrl
-            };
-
+            // Send to Google Sheet / emails
             try {
-                console.log('');
-                console.log('=== SENDING TO GOOGLE SHEET + APPS SCRIPT EMAILS ===');
-                await sendToGoogleSheet(bookingDataWithVerification);
+                console.log('=== SENDING TO GOOGLE SHEET + EMAILS ===');
+                await sendToGoogleSheet({ ...bookingPayload, balance_due, payment_type });
                 console.log('=== GOOGLE SHEET + EMAILS DONE ===');
             } catch (sheetErr) {
                 console.error('❌ Google Sheet error (non-critical):', sheetErr.message);
@@ -831,21 +859,177 @@ export const confirmBooking = async (req, res) => {
             console.log('=== CONFIRM BOOKING COMPLETED ===');
             console.log('');
 
-            return res.status(201).json({ 
-                success: true, 
-                data, 
-                message: 'Booking confirmed successfully!' 
+            return res.status(201).json({
+                success: true,
+                data,
+                message: 'Booking confirmed successfully!',
+                balance_due,
+                payment_type,
             });
         }
 
-        res.status(400).json({ success: false, error: 'Unsupported provider' });
+        res.status(400).json({ success: false, error: 'Unsupported payment provider' });
     } catch (err) {
         console.error('❌ ERROR:', err.message);
-        res.status(500).json({ 
-            success: false, 
+        res.status(500).json({
+            success: false,
             message: 'Failed to confirm booking',
-            error: err.message 
+            error: err.message
         });
+    }
+};
+
+// ============================================
+// PAYPAL — Create Order
+// ============================================
+export const createPayPalOrder = async (req, res) => {
+    try {
+        const { amount, currency = 'USD' } = req.body;
+
+        if (!amount || amount <= 0) {
+            return res.status(400).json({ success: false, error: 'Invalid amount' });
+        }
+
+        const PAYPAL_CLIENT_ID = process.env.PAYPAL_CLIENT_ID;
+        const PAYPAL_CLIENT_SECRET = process.env.PAYPAL_CLIENT_SECRET;
+        const PAYPAL_BASE = process.env.PAYPAL_MODE === 'live'
+            ? 'https://api-m.paypal.com'
+            : 'https://api-m.sandbox.paypal.com';
+
+        if (!PAYPAL_CLIENT_ID || !PAYPAL_CLIENT_SECRET) {
+            return res.status(500).json({ success: false, error: 'PayPal not configured' });
+        }
+
+        // Get access token
+        const auth = Buffer.from(`${PAYPAL_CLIENT_ID}:${PAYPAL_CLIENT_SECRET}`).toString('base64');
+        const tokenRes = await axios.post(
+            `${PAYPAL_BASE}/v1/oauth2/token`,
+            'grant_type=client_credentials',
+            { headers: { Authorization: `Basic ${auth}`, 'Content-Type': 'application/x-www-form-urlencoded' } }
+        );
+        const accessToken = tokenRes.data.access_token;
+
+        // Create order
+        const orderRes = await axios.post(
+            `${PAYPAL_BASE}/v2/checkout/orders`,
+            {
+                intent: 'CAPTURE',
+                purchase_units: [{
+                    amount: { currency_code: currency, value: String(Number(amount).toFixed(2)) },
+                    description: 'BookAStay Booking',
+                }],
+            },
+            { headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' } }
+        );
+
+        res.status(200).json({ success: true, orderID: orderRes.data.id });
+    } catch (err) {
+        console.error('createPayPalOrder error:', err.message);
+        res.status(500).json({ success: false, error: 'Failed to create PayPal order' });
+    }
+};
+
+// ============================================
+// PAYPAL — Capture Order (verify & confirm booking)
+// ============================================
+export const capturePayPalOrder = async (req, res) => {
+    try {
+        const { orderID, ...bookingBody } = req.body;
+
+        if (!orderID) {
+            return res.status(400).json({ success: false, error: 'PayPal order ID required' });
+        }
+
+        const PAYPAL_CLIENT_ID = process.env.PAYPAL_CLIENT_ID;
+        const PAYPAL_CLIENT_SECRET = process.env.PAYPAL_CLIENT_SECRET;
+        const PAYPAL_BASE = process.env.PAYPAL_MODE === 'live'
+            ? 'https://api-m.paypal.com'
+            : 'https://api-m.sandbox.paypal.com';
+
+        // Get access token
+        const auth = Buffer.from(`${PAYPAL_CLIENT_ID}:${PAYPAL_CLIENT_SECRET}`).toString('base64');
+        const tokenRes = await axios.post(
+            `${PAYPAL_BASE}/v1/oauth2/token`,
+            'grant_type=client_credentials',
+            { headers: { Authorization: `Basic ${auth}`, 'Content-Type': 'application/x-www-form-urlencoded' } }
+        );
+        const accessToken = tokenRes.data.access_token;
+
+        // Capture order
+        const captureRes = await axios.post(
+            `${PAYPAL_BASE}/v2/checkout/orders/${orderID}/capture`,
+            {},
+            { headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' } }
+        );
+
+        const captureData = captureRes.data;
+        if (captureData.status !== 'COMPLETED') {
+            return res.status(400).json({ success: false, error: 'PayPal capture not completed' });
+        }
+
+        const captureUnit = captureData.purchase_units?.[0]?.payments?.captures?.[0];
+        const paidAmount = Number(captureUnit?.amount?.value || 0);
+
+        // Now create the booking using the same logic
+        const requestedRoom = bookingBody.room_type || 'entire';
+        const checkIn = bookingBody.check_in_date || bookingBody.check_in;
+        const checkOut = bookingBody.check_out_date || bookingBody.check_out;
+
+        const overlapCheck = await checkRangeOverlap(requestedRoom, checkIn, checkOut);
+        if (overlapCheck.overlapping) {
+            return res.status(409).json({ success: false, error: overlapCheck.message });
+        }
+
+        const discount_amount = Number(bookingBody.discount_amount) || 0;
+        const payment_type = bookingBody.payment_type || 'full';
+        const balance_due = payment_type === 'deposit' ? Math.max(0, Number(bookingBody.price) - paidAmount) : 0;
+
+        const bookingPayload = {
+            user_id: bookingBody.user_id || process.env.GUEST_USER_ID || uuidv4(),
+            room_type: requestedRoom,
+            guests: Number(bookingBody.guests) || 1,
+            check_in: checkIn,
+            check_out: checkOut,
+            name: bookingBody.name || 'Guest User',
+            email: bookingBody.email || 'guest@example.com',
+            phone: bookingBody.phone || null,
+            id_type: bookingBody.id_type || null,
+            id_file_url: bookingBody.id_file_url || null,
+            price: Number(bookingBody.price) || paidAmount,
+            original_price: Number(bookingBody.original_price) || Number(bookingBody.price) || paidAmount,
+            discount_code: bookingBody.discount_code || null,
+            discount_amount,
+            payment_type,
+            deposit_percentage: Number(bookingBody.deposit_percentage) || 100,
+            balance_due,
+            payment_status: 'paid',
+            transaction_ref: orderID,
+            provider: 'paypal',
+            paid_amount: paidAmount,
+            status: 'confirmed',
+            source: 'website',
+        };
+
+        const { data, error } = await supabaseAdmin
+            .from('bookings')
+            .insert([bookingPayload])
+            .select()
+            .maybeSingle();
+
+        if (error) throw error;
+
+        if (bookingBody.discount_code) {
+            await incrementDiscountUsage(bookingBody.discount_code).catch(() => {});
+        }
+
+        try {
+            await sendToGoogleSheet({ ...bookingPayload, balance_due, payment_type });
+        } catch {}
+
+        return res.status(201).json({ success: true, data, message: 'Booking confirmed via PayPal!' });
+    } catch (err) {
+        console.error('capturePayPalOrder error:', err.message);
+        res.status(500).json({ success: false, error: 'Failed to capture PayPal payment' });
     }
 };
 

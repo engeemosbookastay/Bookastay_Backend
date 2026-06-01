@@ -11,6 +11,9 @@ import userRoutes from './routes/user.js';
 import calendarRoutes from './routes/calendar.js';
 import { supabase, connectSupabase } from './services/supabase.js';
 import shuftiProRoutes from './routes/shuftiproroutes.js';
+import propertiesRoutes from './routes/properties.js';
+import discountsRoutes from './routes/discounts.js';
+import contentRoutes from './routes/content.js';
 
 dotenv.config();
 
@@ -43,7 +46,7 @@ const corsOptions = {
 // Apply CORS before everything else so even error responses carry the header
 app.use(cors(corsOptions));
 // Handle pre-flight OPTIONS for all routes
-app.options('*', cors(corsOptions));
+app.options('*splat', cors(corsOptions));
 
 app.use(express.json());
 app.use(cookieParser());
@@ -70,6 +73,9 @@ app.use('/api/contact', contactRoutes);
 app.use('/auth', userRoutes);
 app.use('/api/calendar', calendarRoutes);
 app.use('/api/shufti', shuftiProRoutes);
+app.use('/api', propertiesRoutes);
+app.use('/api', discountsRoutes);
+app.use('/api', contentRoutes);
 
 // Global error handler — must stay last and must re-apply CORS header
 // so browsers don't see a CORS failure when a route throws a 500
