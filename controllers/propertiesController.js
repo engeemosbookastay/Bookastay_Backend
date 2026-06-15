@@ -46,11 +46,19 @@ export const createProperty = async (req, res) => {
     const {
       room_key, name, subtitle, description, category,
       base_price, max_guests, min_nights, bedrooms, bathrooms,
-      amenities, sort_order
+      amenities, sort_order, ical_urls, property_group, blocks_group
     } = req.body;
 
     if (!room_key || !name || !base_price) {
       return res.status(400).json({ success: false, message: 'room_key, name, and base_price are required' });
+    }
+
+    // ical_urls can arrive as array or newline-separated string
+    let parsedIcalUrls = [];
+    if (Array.isArray(ical_urls)) {
+      parsedIcalUrls = ical_urls.filter(Boolean);
+    } else if (typeof ical_urls === 'string' && ical_urls.trim()) {
+      parsedIcalUrls = ical_urls.split('\n').map(s => s.trim()).filter(Boolean);
     }
 
     const { data, error } = await supabaseAdmin
@@ -70,6 +78,9 @@ export const createProperty = async (req, res) => {
         images: [],
         is_active: true,
         sort_order: Number(sort_order) || 99,
+        ical_urls: parsedIcalUrls,
+        property_group: property_group || null,
+        blocks_group: blocks_group === true || blocks_group === 'true',
         updated_at: new Date().toISOString(),
       }])
       .select()
@@ -103,6 +114,11 @@ export const updateProperty = async (req, res) => {
     if (updates.bedrooms) updates.bedrooms = Number(updates.bedrooms);
     if (updates.bathrooms) updates.bathrooms = Number(updates.bathrooms);
     if (updates.sort_order !== undefined) updates.sort_order = Number(updates.sort_order);
+    if (updates.blocks_group !== undefined) updates.blocks_group = updates.blocks_group === true || updates.blocks_group === 'true';
+    if (updates.ical_urls !== undefined && typeof updates.ical_urls === 'string') {
+      updates.ical_urls = updates.ical_urls.split('\n').map(s => s.trim()).filter(Boolean);
+    }
+    if (updates.property_group === '') updates.property_group = null;
 
     // Don't allow changing the primary key via this route
     delete updates.room_key;

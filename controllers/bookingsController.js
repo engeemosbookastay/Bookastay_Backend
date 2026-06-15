@@ -517,62 +517,87 @@ const checkRangeOverlap = async (room_type, check_in, check_out) => {
     const outISO = requestedOut.toISOString();
     const activeStatuses = ['confirmed', 'blocked'];
 
-    if ((room_type || '').toLowerCase() === 'entire') {
-        const { data, error } = await supabaseAdmin
+    // Look up property group config from property_settings
+    let propertyGroup = null;
+    let blocksGroup = false;
+    try {
+        const { data: propData } = await supabaseAdmin
+            .from('property_settings')
+            .select('property_group, blocks_group')
+            .eq('room_key', room_type)
+            .maybeSingle();
+        if (propData) {
+            propertyGroup = propData.property_group;
+            blocksGroup = propData.blocks_group ?? false;
+        } else {
+            // Fallback for legacy 'entire'/'2bedroom' keys not yet in DB
+            blocksGroup = (room_type || '').toLowerCase() === 'entire';
+        }
+    } catch {
+        blocksGroup = (room_type || '').toLowerCase() === 'entire';
+    }
+
+    const overlap = async (extraFilter) => {
+        let q = supabaseAdmin
             .from('bookings')
             .select('id, room_type, check_in, check_out, name, status')
             .in('status', activeStatuses)
             .lt('check_in', outISO)
             .gt('check_out', inISO)
             .limit(1);
-
+        if (extraFilter) q = extraFilter(q);
+        const { data, error } = await q;
         if (error) throw error;
+        return Array.isArray(data) && data.length > 0 ? data[0] : null;
+    };
 
-        if (Array.isArray(data) && data.length > 0) {
-            const blocking = data[0];
+    if (blocksGroup) {
+        // This property blocks its entire group — check all rooms in the same group
+        let groupKeys = null;
+        if (propertyGroup) {
+            const { data: gProps } = await supabaseAdmin
+                .from('property_settings')
+                .select('room_key')
+                .eq('property_group', propertyGroup);
+            groupKeys = (gProps || []).map(p => p.room_key);
+        }
+
+        const blocking = await overlap(groupKeys?.length ? q => q.in('room_type', groupKeys) : null);
+        if (blocking) {
             return {
                 overlapping: true,
                 blocking,
-                message: `Entire apartment is booked from ${new Date(blocking.check_in).toLocaleDateString()} to ${new Date(blocking.check_out).toLocaleDateString()}`
+                message: `Property booked from ${new Date(blocking.check_in).toLocaleDateString()} to ${new Date(blocking.check_out).toLocaleDateString()}`
             };
         }
         return { overlapping: false, blocking: null };
     }
 
-    // Check for entire-apartment blocks (handles both 'entire' and '2bedroom' aliases)
-    const { data: entireData, error: entireErr } = await supabaseAdmin
-        .from('bookings')
-        .select('id, room_type, check_in, check_out, name, status')
-        .or('room_type.ilike.entire,room_type.ilike.2bedroom')
-        .in('status', activeStatuses)
-        .lt('check_in', outISO)
-        .gt('check_out', inISO)
-        .limit(1);
+    // For non-blocking properties: first check if any group-blocking property is booked
+    if (propertyGroup) {
+        const { data: blockers } = await supabaseAdmin
+            .from('property_settings')
+            .select('room_key')
+            .eq('property_group', propertyGroup)
+            .eq('blocks_group', true)
+            .neq('room_key', room_type);
 
-    if (entireErr) throw entireErr;
-
-    if (Array.isArray(entireData) && entireData.length > 0) {
-        const blocking = entireData[0];
-        return {
-            overlapping: true,
-            blocking,
-            message: `Entire apartment is booked from ${new Date(blocking.check_in).toLocaleDateString()} to ${new Date(blocking.check_out).toLocaleDateString()}`
-        };
+        if (blockers?.length > 0) {
+            const blockerKeys = blockers.map(p => p.room_key);
+            const blocking = await overlap(q => q.in('room_type', blockerKeys));
+            if (blocking) {
+                return {
+                    overlapping: true,
+                    blocking,
+                    message: `Not available — entire property is booked from ${new Date(blocking.check_in).toLocaleDateString()} to ${new Date(blocking.check_out).toLocaleDateString()}`
+                };
+            }
+        }
     }
 
-    const { data, error } = await supabaseAdmin
-        .from('bookings')
-        .select('id, room_type, check_in, check_out, name, status')
-        .ilike('room_type', room_type)
-        .in('status', activeStatuses)
-        .lt('check_in', outISO)
-        .gt('check_out', inISO)
-        .limit(1);
-
-    if (error) throw error;
-
-    if (Array.isArray(data) && data.length > 0) {
-        const blocking = data[0];
+    // Check for this specific room_type
+    const blocking = await overlap(q => q.ilike('room_type', room_type));
+    if (blocking) {
         return {
             overlapping: true,
             blocking,

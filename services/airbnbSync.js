@@ -54,24 +54,30 @@ export async function syncFromAirbnb() {
   try {
     console.log('Starting Airbnb calendar sync from multiple sources...');
 
-    // Define the 3 Airbnb calendar URLs with their room types
-    const calendarConfigs = [
-      {
-        url: 'https://www.airbnb.com/calendar/ical/1062424467186970425.ics?t=125d88f11e7e456bb36ccd50967bbfe2&locale=en-AU',
-        room_type: 'entire',
-        name: 'Entire Apartment'
-      },
-      {
-        url: 'https://www.airbnb.com.au/calendar/ical/1073067628849955052.ics?t=8cf36fed668945c6ba7ba75be5da77ab',
-        room_type: 'room1',
-        name: 'Room 1'
-      },
-      {
-        url: 'https://www.airbnb.com.au/calendar/ical/1062425116260973522.ics?t=c337b7c1c4134ac6b213c601408069ce',
-        room_type: 'room2',
-        name: 'Room 2'
-      }
-    ];
+    // Load calendar configs dynamically from property_settings
+    const { data: properties, error: propError } = await supabaseAdmin
+      .from('property_settings')
+      .select('room_key, name, ical_urls')
+      .eq('is_active', true);
+
+    if (propError) {
+      console.error('Failed to load property settings for sync:', propError);
+      throw propError;
+    }
+
+    const calendarConfigs = (properties || [])
+      .filter(p => Array.isArray(p.ical_urls) && p.ical_urls.length > 0)
+      .flatMap(p =>
+        p.ical_urls
+          .map(url => (url || '').trim())
+          .filter(Boolean)
+          .map(url => ({ url, room_type: p.room_key, name: p.name }))
+      );
+
+    if (calendarConfigs.length === 0) {
+      console.log('No iCal URLs configured in property_settings — sync skipped.');
+      return { success: true, newBookings: 0, updatedBookings: 0, existingBookings: 0, errors: 0, totalProcessed: 0 };
+    }
 
     // Calculate 1 year from now for filtering
     const oneYearFromNow = new Date();

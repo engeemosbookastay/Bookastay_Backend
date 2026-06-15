@@ -110,7 +110,7 @@ INSERT INTO site_content (key, title, value) VALUES
         "items": [
           {"name": "Burger King Oke-Ilewo (fast food)", "time": "13 mins"},
           {"name": "SUPERFOODS Oke-Ilewo (fast food)", "time": "11 mins"},
-          {"name": "Domino'\''s Pizza Abeokuta", "time": "10 mins"},
+          {"name": "Domino''s Pizza Abeokuta", "time": "10 mins"},
           {"name": "Sweet Sensation Oke-Ilewo (fast food)", "time": "12 mins"},
           {"name": "WokCity Restaurant Oke-Ilewo (multiple options)", "time": "12 mins"},
           {"name": "Halaga Restaurant (local food)", "time": "8 mins"},
@@ -155,6 +155,15 @@ ALTER TABLE bookings ADD COLUMN IF NOT EXISTS balance_due        NUMERIC DEFAULT
 ALTER TABLE bookings ADD COLUMN IF NOT EXISTS discount_code      TEXT;
 ALTER TABLE bookings ADD COLUMN IF NOT EXISTS discount_amount    NUMERIC DEFAULT 0;
 ALTER TABLE bookings ADD COLUMN IF NOT EXISTS original_price     NUMERIC;
+
+-- 5. iCal + property grouping support
+ALTER TABLE property_settings ADD COLUMN IF NOT EXISTS ical_urls      TEXT[]  DEFAULT '{}';
+ALTER TABLE property_settings ADD COLUMN IF NOT EXISTS property_group TEXT    DEFAULT NULL;
+ALTER TABLE property_settings ADD COLUMN IF NOT EXISTS blocks_group   BOOLEAN DEFAULT false;
+
+-- The 'entire' apartment blocks all rooms in its group
+UPDATE property_settings SET property_group = 'main', blocks_group = true  WHERE room_key = 'entire';
+UPDATE property_settings SET property_group = 'main', blocks_group = false WHERE room_key = 'room1';
 
 -- ============================================================
 -- Enable Row Level Security (RLS) for new tables
