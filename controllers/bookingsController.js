@@ -8,6 +8,7 @@ import path from 'path';
 import PDFDocument from 'pdfkit';
 import axios from 'axios';
 import { incrementDiscountUsage } from './discountsController.js';
+import { normalizePhone } from '../utils/phone.js';
 
 
 
@@ -30,6 +31,19 @@ const getPropertyPrice = async (room_type) => {
     } catch {
         return null;
     }
+};
+
+const isPhoneVerified = async (phone) => {
+    if (!phone) return false;
+    const { data } = await supabaseAdmin
+        .from('phone_verifications')
+        .select('id')
+        .eq('phone', normalizePhone(phone))
+        .eq('verified', true)
+        .order('verified_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+    return !!data;
 };
 
 // ============================================
@@ -740,7 +754,7 @@ export const confirmBooking = async (req, res) => {
 
         const body = req.body || {};
 
-        // Handle ID file upload
+        // Optional ID file upload (no longer required — ID is checked physically at check-in)
         if (!body.id_file_url && req.file) {
             console.log('Uploading ID file...');
             const uploaded = await uploadBuffer(req.file.buffer, req.file.originalname || `id_${Date.now()}`);
@@ -748,8 +762,8 @@ export const confirmBooking = async (req, res) => {
             console.log('✅ ID file uploaded');
         }
 
-        if (!body.id_file_url) {
-            return res.status(400).json({ success: false, error: 'ID file is required.' });
+        if (!(await isPhoneVerified(body.phone))) {
+            return res.status(400).json({ success: false, error: 'Please verify your phone number before booking.' });
         }
 
         const provider = (body.provider || '').toLowerCase();
@@ -963,6 +977,10 @@ export const capturePayPalOrder = async (req, res) => {
 
         if (!orderID) {
             return res.status(400).json({ success: false, error: 'PayPal order ID required' });
+        }
+
+        if (!(await isPhoneVerified(bookingBody.phone))) {
+            return res.status(400).json({ success: false, error: 'Please verify your phone number before booking.' });
         }
 
         const PAYPAL_CLIENT_ID = process.env.PAYPAL_CLIENT_ID;

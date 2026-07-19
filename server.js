@@ -10,10 +10,11 @@ import contactRoutes from './routes/contact.js';
 import userRoutes from './routes/user.js';
 import calendarRoutes from './routes/calendar.js';
 import { supabase, connectSupabase } from './services/supabase.js';
-import shuftiProRoutes from './routes/shuftiproroutes.js';
 import propertiesRoutes from './routes/properties.js';
 import discountsRoutes from './routes/discounts.js';
 import contentRoutes from './routes/content.js';
+import otpRoutes from './routes/otp.js';
+import { checkTermiiHealth } from './services/termiiClient.js';
 
 dotenv.config();
 
@@ -76,10 +77,10 @@ app.use('/api', adminRoutes);
 app.use('/api/contact', contactRoutes);
 app.use('/auth', userRoutes);
 app.use('/api/calendar', calendarRoutes);
-app.use('/api/shufti', shuftiProRoutes);
 app.use('/api', propertiesRoutes);
 app.use('/api', discountsRoutes);
 app.use('/api', contentRoutes);
+app.use('/api', otpRoutes);
 
 // Global error handler — must stay last and must re-apply CORS header
 // so browsers don't see a CORS failure when a route throws a 500
@@ -105,6 +106,19 @@ async function start() {
     console.error('FATAL: Supabase startup check failed:', err.message || err);
     process.exit(1);
   }
+
+  // Non-fatal: OTP is only one feature, but fail loudly so a bad key is never a surprise
+  checkTermiiHealth().then((r) => {
+    if (!r.ok) {
+      console.error('❌ TERMII OTP IS BROKEN — phone verification WILL FAIL:', r.error);
+      console.error(`   (tried ${r.baseUrl}) Check TERMII_API_KEY and TERMII_BASE_URL in Backend/.env —`);
+      console.error('   both values are on your dashboard at https://app.termii.com — then restart this server.');
+    } else if (r.balance < 50) {
+      console.warn(`⚠️ Termii balance is low (${r.balance} ${r.currency || ''}) — top up or OTP SMS will stop sending.`);
+    } else {
+      console.log(`📱 Termii OK — balance: ${r.balance} ${r.currency || ''}`);
+    }
+  });
 
   app.listen(port, () => console.log(`Server running on port ${port}`));
 }

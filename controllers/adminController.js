@@ -1,5 +1,6 @@
 import { supabaseAdmin } from '../services/supabase.js';
 import bcrypt from 'bcryptjs';
+import jwt from 'jsonwebtoken';
 import { checkRangeOverlap } from './bookingsController.js';
 
 const ADMIN = '00000000-0000-0000-0000-000000000000';
@@ -42,9 +43,16 @@ export const adminLogin = async (req, res) => {
 
       const { password: _, ...adminData } = admin;
 
+      const token = jwt.sign(
+        { id: admin.id, email: admin.email, name: admin.name },
+        process.env.JWT_SECRET || 'bookastay_secret',
+        { expiresIn: '8h' }
+      );
+
       res.status(200).json({
         success: true,
         message: 'Login successful',
+        token,
         admin: adminData,
       });
     } catch (err) {
