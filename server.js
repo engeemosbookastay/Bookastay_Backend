@@ -37,6 +37,7 @@ const allowedOrigins = [
   "https://admin.bookastayng.com",
   "https://bookastayng.com",
   "https://www.bookastayng.com",
+  "https://bookastay-admin.vercel.app"
 ];
 
 const corsOptions = {
