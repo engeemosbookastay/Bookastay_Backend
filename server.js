@@ -14,6 +14,7 @@ import propertiesRoutes from './routes/properties.js';
 import discountsRoutes from './routes/discounts.js';
 import contentRoutes from './routes/content.js';
 import otpRoutes from './routes/otp.js';
+import blogRoutes from './routes/blog.js';
 import { checkTermiiHealth } from './services/termiiClient.js';
 
 dotenv.config();
@@ -28,6 +29,8 @@ const allowedOrigins = [
   "http://localhost:5177",
   "http://localhost:5178",
   "http://localhost:5179",
+  "http://localhost:5171",
+  "http://localhost:5177/",
   "https://book-astay.vercel.app",
   "https://booka-stay.vercel.app",
   "https://bookastay-admin.vercel.app",
@@ -81,6 +84,7 @@ app.use('/api', propertiesRoutes);
 app.use('/api', discountsRoutes);
 app.use('/api', contentRoutes);
 app.use('/api', otpRoutes);
+app.use('/api', blogRoutes);
 
 // Global error handler — must stay last and must re-apply CORS header
 // so browsers don't see a CORS failure when a route throws a 500

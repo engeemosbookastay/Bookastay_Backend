@@ -61,6 +61,24 @@ export const createProperty = async (req, res) => {
       parsedIcalUrls = ical_urls.split('\n').map(s => s.trim()).filter(Boolean);
     }
 
+    // Enforce the apartment's room cap: a group can't have more single rooms
+    // than its entire-apartment listing declares (its `bedrooms`).
+    const isRoomInGroup = property_group && !(blocks_group === true || blocks_group === 'true');
+    if (isRoomInGroup) {
+      const { data: groupRows } = await supabaseAdmin
+        .from('property_settings')
+        .select('bedrooms, blocks_group')
+        .eq('property_group', property_group);
+      const entire = (groupRows || []).find(r => r.blocks_group);
+      const existingRooms = (groupRows || []).filter(r => !r.blocks_group).length;
+      if (entire && Number(entire.bedrooms) > 0 && existingRooms >= Number(entire.bedrooms)) {
+        return res.status(400).json({
+          success: false,
+          message: `This apartment already has all ${entire.bedrooms} room(s). Increase the apartment's room count first.`,
+        });
+      }
+    }
+
     const { data, error } = await supabaseAdmin
       .from('property_settings')
       .insert([{
@@ -76,7 +94,7 @@ export const createProperty = async (req, res) => {
         bathrooms: Number(bathrooms) || 1,
         amenities: amenities || [],
         images: [],
-        is_active: true,
+        is_active: false, // stays hidden until an image is added and admin toggles it on (#8)
         sort_order: Number(sort_order) || 99,
         ical_urls: parsedIcalUrls,
         property_group: property_group || null,
@@ -123,6 +141,19 @@ export const updateProperty = async (req, res) => {
     // Don't allow changing the primary key via this route
     delete updates.room_key;
 
+    // A property may only go active if it has at least one image (#8)
+    const activating = updates.is_active === true || updates.is_active === 'true';
+    if (activating) {
+      const { data: existing } = await supabaseAdmin
+        .from('property_settings')
+        .select('images')
+        .eq('room_key', room_key)
+        .single();
+      if (!existing || (existing.images || []).length === 0) {
+        return res.status(400).json({ success: false, message: 'Add at least one image before activating this property.' });
+      }
+    }
+
     const { data, error } = await supabaseAdmin
       .from('property_settings')
       .update(updates)
@@ -157,6 +188,26 @@ export const deleteProperty = async (req, res) => {
   } catch (err) {
     console.error('deleteProperty error:', err);
     res.status(500).json({ success: false, message: 'Failed to deactivate property' });
+  }
+};
+
+// ==========================================
+// ADMIN — Permanently delete property (removes the row entirely)
+// ==========================================
+export const hardDeleteProperty = async (req, res) => {
+  try {
+    const { room_key } = req.params;
+
+    const { error } = await supabaseAdmin
+      .from('property_settings')
+      .delete()
+      .eq('room_key', room_key);
+
+    if (error) throw error;
+    res.status(200).json({ success: true, message: 'Property permanently deleted' });
+  } catch (err) {
+    console.error('hardDeleteProperty error:', err);
+    res.status(500).json({ success: false, message: 'Failed to delete property' });
   }
 };
 

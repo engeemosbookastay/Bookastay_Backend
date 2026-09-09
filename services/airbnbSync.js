@@ -39,17 +39,6 @@ function parseICalDate(icalDate) {
   return date.toISOString().split('T')[0];
 }
 
-/**
- * Subtract one day from a YYYY-MM-DD date string.
- * Used for DTEND which is exclusive (checkout day, not last night stayed).
- */
-function subtractOneDay(dateString) {
-  const [year, month, day] = dateString.split('-').map(Number);
-  const date = new Date(Date.UTC(year, month - 1, day));
-  date.setUTCDate(date.getUTCDate() - 1);
-  return date.toISOString().split('T')[0];
-}
-
 export async function syncFromAirbnb() {
   try {
     console.log('Starting Airbnb calendar sync from multiple sources...');
@@ -114,10 +103,11 @@ export async function syncFromAirbnb() {
           const checkIn = parseICalDate(event.start);
           const dtEnd = parseICalDate(event.end);
 
-          // CRITICAL FIX: DTEND is exclusive in iCal format
-          // If guest checks out April 18, DTEND=20250418, but last night is April 17
-          // So check_out (last night stayed) = DTEND - 1 day
-          const checkOut = subtractOneDay(dtEnd);
+          // Store check_out as the exclusive checkout day (= DTEND), matching how the
+          // website stores bookings and how checkRangeOverlap and the iCal export both
+          // interpret check_out. (Subtracting a day here previously under-blocked the
+          // final night — a double-booking risk on the checkout-day boundary.)
+          const checkOut = dtEnd;
 
           // Skip events more than 1 year in the future
           const checkInDate = new Date(checkIn);

@@ -15,6 +15,7 @@ router.get('/admin/properties', propertiesController.getAllPropertiesAdmin);
 router.post('/admin/properties', propertiesController.createProperty);
 router.put('/admin/properties/:room_key', propertiesController.updateProperty);
 router.delete('/admin/properties/:room_key', propertiesController.deleteProperty);
+router.delete('/admin/properties/:room_key/permanent', propertiesController.hardDeleteProperty);
 router.post('/admin/properties/:room_key/images', upload.single('image'), propertiesController.uploadPropertyImage);
 router.delete('/admin/properties/:room_key/images', propertiesController.removePropertyImage);
 

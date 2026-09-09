@@ -1,0 +1,159 @@
+[
+  {
+    "room_key": "room3",
+    "name": "Executive Suite",
+    "subtitle": "2 Bedrooms · Executive",
+    "description": null,
+    "category": "suite",
+    "base_price": 65000,
+    "max_guests": 4,
+    "min_nights": 2,
+    "bedrooms": 2,
+    "bathrooms": 2,
+    "images": [],
+    "amenities": [
+      {
+        "name": "Air Conditioning"
+      },
+      {
+        "name": "High-Speed WiFi"
+      },
+      {
+        "name": "Smart TV"
+      },
+      {
+        "name": "Private Bathroom"
+      },
+      {
+        "name": "Full Kitchen"
+      },
+      {
+        "name": "Washing Machine"
+      }
+    ],
+    "is_active": false,
+    "sort_order": 3,
+    "updated_at": "2026-09-08T14:04:38.667+00:00",
+    "ical_urls": [],
+    "property_group": null,
+    "blocks_group": false
+  },
+  {
+    "room_key": "room2",
+    "name": "Deluxe Room",
+    "subtitle": "1 Bedroom · Deluxe",
+    "description": null,
+    "category": "deluxe",
+    "base_price": 45000,
+    "max_guests": 2,
+    "min_nights": 1,
+    "bedrooms": 1,
+    "bathrooms": 1,
+    "images": [],
+    "amenities": [
+      {
+        "name": "Air Conditioning"
+      },
+      {
+        "name": "High-Speed WiFi"
+      },
+      {
+        "name": "Smart TV"
+      },
+      {
+        "name": "Private Bathroom"
+      },
+      {
+        "name": "Work Desk"
+      }
+    ],
+    "is_active": false,
+    "sort_order": 2,
+    "updated_at": "2026-09-08T14:04:40.926+00:00",
+    "ical_urls": [],
+    "property_group": null,
+    "blocks_group": false
+  },
+  {
+    "room_key": "entire",
+    "name": "2 Bedroom Apartment",
+    "subtitle": "Spacious luxury apartment perfect for families",
+    "description": "Experience luxury in our spacious 2-bedroom apartment. Featuring modern amenities, a fully equipped kitchen, elegant living spaces, and stunning balconies with breathtaking views. Perfect for families or groups seeking comfort and privacy in the heart of Abeokuta.",
+    "category": "Entire Apartment",
+    "base_price": 85000,
+    "max_guests": 4,
+    "min_nights": 1,
+    "bedrooms": 2,
+    "bathrooms": 2,
+    "images": [],
+    "amenities": [],
+    "is_active": false,
+    "sort_order": 1,
+    "updated_at": "2026-09-08T14:04:45.487+00:00",
+    "ical_urls": [],
+    "property_group": "main",
+    "blocks_group": true
+  },
+  {
+    "room_key": "room1",
+    "name": "1 Bedroom Suite",
+    "subtitle": "Cozy and elegant for solo travelers or couples",
+    "description": "Your perfect retreat awaits! This beautifully designed 1-bedroom suite offers comfort and privacy with access to premium shared spaces. Ideal for solo travelers or couples seeking a peaceful escape with all the amenities you need.",
+    "category": "Private Room",
+    "base_price": 50000,
+    "max_guests": 2,
+    "min_nights": 2,
+    "bedrooms": 1,
+    "bathrooms": 1,
+    "images": [],
+    "amenities": [],
+    "is_active": false,
+    "sort_order": 2,
+    "updated_at": "2026-09-08T14:04:48.131+00:00",
+    "ical_urls": [],
+    "property_group": "main",
+    "blocks_group": false
+  },
+  {
+    "room_key": "room4",
+    "name": "Family Apartment",
+    "subtitle": "3 Bedrooms · Family",
+    "description": null,
+    "category": "family",
+    "base_price": 85000,
+    "max_guests": 6,
+    "min_nights": 2,
+    "bedrooms": 3,
+    "bathrooms": 2,
+    "images": [],
+    "amenities": [
+      {
+        "name": "Air Conditioning"
+      },
+      {
+        "name": "High-Speed WiFi"
+      },
+      {
+        "name": "DSTV / Cable TV"
+      },
+      {
+        "name": "Full Kitchen"
+      },
+      {
+        "name": "Washing Machine"
+      },
+      {
+        "name": "Free Parking"
+      },
+      {
+        "name": "Generator / Backup Power"
+      }
+    ],
+    "is_active": false,
+    "sort_order": 4,
+    "updated_at": "2026-09-08T14:04:36.577+00:00",
+    "ical_urls": [],
+    "property_group": null,
+    "blocks_group": false
+  }
+]

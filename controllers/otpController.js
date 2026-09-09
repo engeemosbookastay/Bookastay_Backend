@@ -1,5 +1,21 @@
 import { supabaseAdmin } from '../services/supabase.js';
-import { transporter } from '../mailer.js';
+import nodemailer from 'nodemailer';
+
+// Send OTP through the working qservers mailbox (not the dead Gmail account).
+// Codes are still stored/verified in Supabase (email_verifications table).
+const transporter = nodemailer.createTransport({
+  host: process.env.SMTP_HOST || '26.qservers.net',
+  port: parseInt(process.env.SMTP_PORT) || 465,
+  secure: true,
+  auth: {
+    user: process.env.EMAIL_USER,
+    pass: process.env.EMAIL_PASS,
+  },
+  tls: { rejectUnauthorized: false },
+  connectionTimeout: 10000,
+  greetingTimeout: 10000,
+  socketTimeout: 15000,
+});
 
 const generateCode = () => Math.floor(100000 + Math.random() * 900000).toString();
 
@@ -25,7 +41,7 @@ export const sendOtp = async (req, res) => {
     }
 
     await transporter.sendMail({
-      from: `"BookAStay" <${process.env.GMAIL_USER}>`,
+      from: `"BookAStay" <${process.env.EMAIL_USER}>`,
       to: email,
       subject: 'Your BookAStay Verification Code',
       html: `
