@@ -222,6 +222,18 @@ export const uploadPropertyImage = async (req, res) => {
       return res.status(400).json({ success: false, message: 'No image file provided' });
     }
 
+    // Confirm the property exists BEFORE uploading (avoids orphan images + gives a clear error)
+    const { data: current, error: findErr } = await supabaseAdmin
+      .from('property_settings')
+      .select('images')
+      .eq('room_key', room_key)
+      .maybeSingle();
+
+    if (findErr) throw findErr;
+    if (!current) {
+      return res.status(404).json({ success: false, message: `Property "${room_key}" not found.` });
+    }
+
     const uploaded = await uploadBuffer(req.file.buffer, `property_${room_key}_${Date.now()}`);
     const imageUrl = uploaded.secure_url || uploaded.url;
 
@@ -229,15 +241,7 @@ export const uploadPropertyImage = async (req, res) => {
       return res.status(500).json({ success: false, message: 'Upload succeeded but URL not returned' });
     }
 
-    // Fetch current images and append
-    const { data: current } = await supabaseAdmin
-      .from('property_settings')
-      .select('images')
-      .eq('room_key', room_key)
-      .single();
-
-    const currentImages = current?.images || [];
-    const newImages = [...currentImages, imageUrl];
+    const newImages = [...(current.images || []), imageUrl];
 
     const { data, error } = await supabaseAdmin
       .from('property_settings')
@@ -251,7 +255,7 @@ export const uploadPropertyImage = async (req, res) => {
     res.status(200).json({ success: true, url: imageUrl, property: data });
   } catch (err) {
     console.error('uploadPropertyImage error:', err);
-    res.status(500).json({ success: false, message: 'Failed to upload image: ' + err.message });
+    res.status(500).json({ success: false, message: 'Failed to upload image: ' + (err.message || err) });
   }
 };
 

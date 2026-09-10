@@ -1,4 +1,5 @@
 import { supabaseAdmin } from '../services/supabase.js';
+import { uploadBuffer } from '../services/cloudinaryClient.js';
 
 // ==========================================
 // PUBLIC — Get all site content
@@ -75,5 +76,29 @@ export const upsertContent = async (req, res) => {
   } catch (err) {
     console.error('upsertContent error:', err);
     res.status(500).json({ success: false, message: 'Failed to update content' });
+  }
+};
+
+// ==========================================
+// ADMIN — Upload a content image (e.g. homepage carousel slides)
+// Mirrors blogController.uploadBlogImage: multipart field "image" → Cloudinary.
+// ==========================================
+export const uploadContentImage = async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ success: false, message: 'No image file provided' });
+    }
+
+    const uploaded = await uploadBuffer(req.file.buffer, `content_${Date.now()}`);
+    const imageUrl = uploaded.secure_url || uploaded.url;
+
+    if (!imageUrl) {
+      return res.status(500).json({ success: false, message: 'Upload succeeded but URL not returned' });
+    }
+
+    res.status(200).json({ success: true, url: imageUrl });
+  } catch (err) {
+    console.error('uploadContentImage error:', err);
+    res.status(500).json({ success: false, message: 'Failed to upload image: ' + err.message });
   }
 };

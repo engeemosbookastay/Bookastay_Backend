@@ -10,6 +10,9 @@ cloudinary.config({
 });
 
 async function uploadBuffer(buffer, filename) {
+  if (!process.env.CLOUDINARY_CLOUD_NAME || !process.env.CLOUDINARY_API_KEY || !process.env.CLOUDINARY_API_SECRET) {
+    return Promise.reject(new Error('Image hosting is not configured on the server: set CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY and CLOUDINARY_API_SECRET in the backend environment, then restart.'));
+  }
   // Upload via stream with proper configuration
   return new Promise((resolve, reject) => {
     const uploadStream = cloudinary.uploader.upload_stream(
