@@ -762,9 +762,8 @@ export const confirmBooking = async (req, res) => {
             console.log('✅ ID file uploaded');
         }
 
-        if (!(await isPhoneVerified(body.phone))) {
-            return res.status(400).json({ success: false, error: 'Please verify your phone number before booking.' });
-        }
+        // Phone is now a plain contact field (email is the verified channel). Never reject an
+        // already-paid booking over phone verification — record whatever the guest provided.
 
         const provider = (body.provider || '').toLowerCase();
         const payment_type = body.payment_type || 'full';
@@ -886,13 +885,20 @@ export const confirmBooking = async (req, res) => {
                 await incrementDiscountUsage(discount_code).catch(() => {});
             }
 
-            // Send to Google Sheet / emails
+            // Booking is already saved & paid, so notifications must NEVER fail the request.
+            const notifyData = { ...bookingPayload, id: data?.id, balance_due, payment_type };
             try {
-                console.log('=== SENDING TO GOOGLE SHEET + EMAILS ===');
-                await sendToGoogleSheet({ ...bookingPayload, balance_due, payment_type });
-                console.log('=== GOOGLE SHEET + EMAILS DONE ===');
+                await sendToGoogleSheet(notifyData);
             } catch (sheetErr) {
                 console.error('❌ Google Sheet error (non-critical):', sheetErr.message);
+            }
+            try {
+                console.log('=== SENDING CONFIRMATION EMAILS ===');
+                await sendCustomerEmail(notifyData.email, notifyData, null).catch(e => console.error('❌ Customer email failed:', e.message));
+                await sendClientNotification(notifyData, null).catch(e => console.error('❌ Client notification failed:', e.message));
+                console.log('=== EMAILS DONE ===');
+            } catch (emailErr) {
+                console.error('❌ Email send failed (non-critical):', emailErr.message);
             }
 
             console.log('=== CONFIRM BOOKING COMPLETED ===');
@@ -979,9 +985,7 @@ export const capturePayPalOrder = async (req, res) => {
             return res.status(400).json({ success: false, error: 'PayPal order ID required' });
         }
 
-        if (!(await isPhoneVerified(bookingBody.phone))) {
-            return res.status(400).json({ success: false, error: 'Please verify your phone number before booking.' });
-        }
+        // Phone is now a plain contact field (email is the verified channel) — no phone gate.
 
         const PAYPAL_CLIENT_ID = process.env.PAYPAL_CLIENT_ID;
         const PAYPAL_CLIENT_SECRET = process.env.PAYPAL_CLIENT_SECRET;
