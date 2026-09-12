@@ -5,6 +5,7 @@ import cloudinary, { uploadBuffer } from '../services/cloudinaryClient.js';
 import nodemailer from 'nodemailer';
 import fs from 'fs';
 import path from 'path';
+import os from 'os';
 import PDFDocument from 'pdfkit';
 import axios from 'axios';
 import { incrementDiscountUsage } from './discountsController.js';
@@ -892,13 +893,23 @@ export const confirmBooking = async (req, res) => {
             } catch (sheetErr) {
                 console.error('❌ Google Sheet error (non-critical):', sheetErr.message);
             }
+            let pdfPath = null;
+            try {
+                pdfPath = path.join(os.tmpdir(), `receipt_${payment_reference || data?.id || Date.now()}.pdf`);
+                await generateReceiptPDF(notifyData, pdfPath);
+            } catch (pdfErr) {
+                console.error('❌ Receipt PDF failed (emailing without attachment):', pdfErr.message);
+                pdfPath = null;
+            }
             try {
                 console.log('=== SENDING CONFIRMATION EMAILS ===');
-                await sendCustomerEmail(notifyData.email, notifyData, null).catch(e => console.error('❌ Customer email failed:', e.message));
-                await sendClientNotification(notifyData, null).catch(e => console.error('❌ Client notification failed:', e.message));
+                await sendCustomerEmail(notifyData.email, notifyData, pdfPath).catch(e => console.error('❌ Customer email failed:', e.message));
+                await sendClientNotification(notifyData, pdfPath).catch(e => console.error('❌ Client notification failed:', e.message));
                 console.log('=== EMAILS DONE ===');
             } catch (emailErr) {
                 console.error('❌ Email send failed (non-critical):', emailErr.message);
+            } finally {
+                if (pdfPath) { try { fs.unlinkSync(pdfPath); } catch {} }
             }
 
             console.log('=== CONFIRM BOOKING COMPLETED ===');
