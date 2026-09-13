@@ -73,7 +73,7 @@ CREATE TABLE IF NOT EXISTS site_content (
 INSERT INTO site_content (key, title, value) VALUES
   ('about', 'About Us', '{
     "paragraphs": [
-      "Engeemos Bookastay Ventures is a registered business name. We currently oversee hosting services for <strong>Oluwadarasimi Villa</strong> a block of flats boasting of modern facilities and aesthetically styled interior. Ensconced in a serene and secure part of <strong>Olomore</strong>, Abeokuta, this property is close to Lafenwa, Ita-Oshin, Brewery, Ibara-Omida, Oke-Ilewo, and just about 20-25 minutes of driving to Kuto/Oke-Mosan area and Olusegun Obasanjo Presidential Library.",
+      "Engeemos Bookastay Ventures is a registered business name. We currently oversee hosting services for <strong>Engeemos Bookastay Apartments</strong> a block of flats boasting of modern facilities and aesthetically styled interior. Ensconced in a serene and secure part of <strong>Olomore</strong>, Abeokuta, this property is close to Lafenwa, Ita-Oshin, Brewery, Ibara-Omida, Oke-Ilewo, and just about 20-25 minutes of driving to Kuto/Oke-Mosan area and Olusegun Obasanjo Presidential Library.",
       "Rare find tourist attraction centres like the recently revamped Olumo Rock, the Kuti Heritage Museum and the Adire Mall, Itoku are just few minutes of driving away.",
       "At <strong>Engeemos Bookastay</strong>, we put <strong>guests'' satisfaction and privacy</strong> at the core of our service delivery, thus ensuring guests never felt like they have left their homes <strong>-a sharp contrast to the prevailing atmosphere at hotels</strong>.",
       "As part of our future plan, we intend to bring on board more verified, comfortable and guests-centric short stay accommodations."
