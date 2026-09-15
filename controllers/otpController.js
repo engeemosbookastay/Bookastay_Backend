@@ -24,11 +24,50 @@ const transporter = nodemailer.createTransport({
   socketTimeout: 30000,
 });
 
+// ── HTTP email transport (Google Apps Script web app) ───────────────────────
+// The shared SMTP host (port 465) times out from Render, which blocks outbound
+// SMTP. A Google Apps Script web app sends over HTTPS (443) — never blocked —
+// using the owner's Gmail, the same mechanism already used for the Sheets
+// webhook. OPT-IN: with no OTP_MAILER_URL set, behaviour is unchanged (SMTP
+// only). Set EMAIL_TRANSPORT=http to use the mailer as the only sender.
+//
+// The web app is deployed "anyone with the link", so we send a shared secret it
+// checks before sending — otherwise the public URL could be abused to send mail.
+// The script only SENDS; the code is still generated, stored and verified here
+// in the backend (Supabase email_verifications), so nothing sensitive lives in
+// Google.
+const OTP_MAILER_URL    = process.env.OTP_MAILER_URL;
+const OTP_MAILER_SECRET = process.env.OTP_MAILER_SECRET || '';
+const EMAIL_TRANSPORT   = (process.env.EMAIL_TRANSPORT || '').toLowerCase(); // '' | 'smtp' | 'http'
+const httpEmailEnabled  = !!OTP_MAILER_URL;
+
 // Verify SMTP connectivity once at boot so problems show up in the logs early,
-// instead of only when the first guest tries to verify. Never throws.
-transporter.verify()
-  .then(() => console.log('✉️  SMTP transporter ready'))
-  .catch((err) => console.error('⚠️  SMTP transporter NOT ready:', err.message));
+// instead of only when the first guest tries to verify. Skipped when we run
+// HTTP-only. Never throws.
+if (EMAIL_TRANSPORT !== 'http') {
+  transporter.verify()
+    .then(() => console.log('✉️  SMTP transporter ready'))
+    .catch((err) => console.error('⚠️  SMTP transporter NOT ready:', err.message));
+}
+if (httpEmailEnabled) {
+  console.log(`✉️  HTTP email transport (Apps Script) enabled → ${OTP_MAILER_URL}`);
+}
+
+// Send one email by POSTing to the Apps Script web app (native fetch, Node 18+).
+const sendViaHttpMailer = async ({ to, subject, html }) => {
+  const resp = await fetch(OTP_MAILER_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ secret: OTP_MAILER_SECRET, to, subject, html }),
+    redirect: 'follow', // Apps Script /exec replies with a 302 to googleusercontent
+  });
+  const text = await resp.text().catch(() => '');
+  if (!resp.ok) throw new Error(`Mailer HTTP ${resp.status}: ${text.slice(0, 200)}`);
+  let body = null;
+  try { body = JSON.parse(text); } catch { /* Apps Script may return HTML on error */ }
+  if (body && body.ok === false) throw new Error(`Mailer refused: ${body.error || 'unknown'}`);
+  return body || {};
+};
 
 const RESEND_COOLDOWN_MS = 45 * 1000; // min gap between codes for one email
 const OTP_TTL_MS = 10 * 60 * 1000;    // code lifetime
@@ -90,6 +129,30 @@ const sendWithRetry = async (mailOptions, attempts = 3) => {
   throw lastErr;
 };
 
+// Deliver through whichever transport is available. EMAIL_TRANSPORT=http skips
+// SMTP entirely (use when the SMTP host is known-unreachable, e.g. on Render).
+// Otherwise SMTP is tried first and the Apps Script mailer is the automatic
+// fallback when every SMTP attempt fails — so a timing-out mailbox no longer
+// blocks verification.
+const deliverOtpEmail = async (mailOptions) => {
+  const httpPayload = { to: mailOptions.to, subject: mailOptions.subject, html: mailOptions.html };
+
+  if (EMAIL_TRANSPORT === 'http') {
+    if (!httpEmailEnabled) throw new Error('EMAIL_TRANSPORT=http but OTP_MAILER_URL is not set');
+    return sendViaHttpMailer(httpPayload);
+  }
+
+  try {
+    return await sendWithRetry(mailOptions);
+  } catch (smtpErr) {
+    if (httpEmailEnabled) {
+      console.error('SMTP failed — falling back to Apps Script mailer:', smtpErr.message);
+      return sendViaHttpMailer(httpPayload);
+    }
+    throw smtpErr;
+  }
+};
+
 // ── Send OTP to email ──────────────────────────────────────────────
 export const sendOtp = async (req, res) => {
   try {
@@ -123,7 +186,7 @@ export const sendOtp = async (req, res) => {
     // Send FIRST — only persist the code once the email actually goes out, so a
     // failed send doesn't leave an orphan row or trigger the cooldown.
     try {
-      await sendWithRetry({
+      await deliverOtpEmail({
         from: `"BookAStay" <${process.env.EMAIL_USER}>`,
         to: email,
         subject: 'Your BookAStay Verification Code',
