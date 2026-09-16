@@ -52,6 +52,16 @@ var SHARED_SECRET = 'CHANGE_ME_to_a_long_random_secret';
 
 var SENDER_NAME = 'BookAStay';   // display name recipients see in the "From" field
 
+// OPTIONAL — the address the email should appear to come FROM.
+//   Leave '' to send from the Google account that owns this script
+//   (e.g. engeemosbookastay@gmail.com if you deploy under that account).
+//   To send from a custom address like engeemosbookastay@bookastayng.com, that
+//   address must FIRST be added and verified in this same account under
+//   Gmail ▸ ⚙ Settings ▸ Accounts and Import ▸ "Send mail as". If it is not a
+//   verified alias, we automatically fall back to the account's own address so
+//   the code is never lost.
+var SENDER_EMAIL = 'engeemosbookastay@bookastayng.com';
+
 // ── The backend POSTs here to send one email ───────────────────────────────────
 function doPost(e) {
   try {
@@ -74,13 +84,23 @@ function doPost(e) {
     if (!to) return _json({ ok: false, error: 'missing_to' });
     if (!html) return _json({ ok: false, error: 'missing_html' });
 
-    MailApp.sendEmail({
+    var mailOpts = {
       to: to,
       subject: subject,
       htmlBody: html,
       body: _stripHtml(html),   // plain-text fallback for old email clients
       name: SENDER_NAME,
-    });
+    };
+    if (SENDER_EMAIL) mailOpts.from = SENDER_EMAIL;
+
+    try {
+      MailApp.sendEmail(mailOpts);
+    } catch (fromErr) {
+      // Most likely SENDER_EMAIL is not a verified "Send mail as" alias — retry
+      // from the account's own address so the guest still gets the code.
+      delete mailOpts.from;
+      MailApp.sendEmail(mailOpts);
+    }
 
     return _json({ ok: true, remainingQuota: MailApp.getRemainingDailyQuota() });
   } catch (err) {

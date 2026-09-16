@@ -10,6 +10,7 @@ import PDFDocument from 'pdfkit';
 import axios from 'axios';
 import { incrementDiscountUsage } from './discountsController.js';
 import { normalizePhone } from '../utils/phone.js';
+import { isCheckInTooSoon, LEAD_TIME_MESSAGE } from '../utils/leadTime.js';
 
 
 
@@ -653,6 +654,11 @@ export const getAvailability = async (req, res) => {
             });
         }
 
+        // Lead-time rule: check-in must be booked by 9pm WAT the day before.
+        if (isCheckInTooSoon(check_in_date)) {
+            return res.status(200).json({ success: true, available: false, message: LEAD_TIME_MESSAGE });
+        }
+
         const result = await checkRangeOverlap(room_type, check_in_date, check_out_date);
 
         if (result.message === 'Invalid date range') {
@@ -697,6 +703,11 @@ export const createBooking = async (req, res) => {
 
         if (!check_in_date || !check_out_date || !name || !email || !phone) {
             return res.status(400).json({ success: false, message: 'Missing required fields' });
+        }
+
+        // Lead-time rule: check-in must be booked by 9pm WAT the day before.
+        if (isCheckInTooSoon(check_in_date)) {
+            return res.status(400).json({ success: false, message: LEAD_TIME_MESSAGE });
         }
 
         const nights = calculateNights(check_in_date, check_out_date);
