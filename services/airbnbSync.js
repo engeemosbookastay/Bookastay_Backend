@@ -86,12 +86,22 @@ export async function syncFromAirbnb() {
         // Fetch Airbnb calendar
         console.log(`Fetching ${config.name} calendar from Airbnb...`);
         const response = await axios.get(config.url);
+        if (typeof response.data !== 'string' || !response.data.includes('BEGIN:VCALENDAR')) {
+          throw new Error(`Response from ${config.name} calendar is not a valid iCal feed`);
+        }
         const events = ical.parseICS(response.data);
 
         let newBookingsCount = 0;
         let existingBookingsCount = 0;
         let updatedBookingsCount = 0;
+        let removedBookingsCount = 0;
         let errorCount = 0;
+
+        // Every UID currently in the feed — anything we stored that is no longer here
+        // was cancelled or moved on Airbnb and must stop blocking dates.
+        const feedUids = new Set(
+          Object.values(events).filter(e => e.type === 'VEVENT' && e.uid).map(e => e.uid)
+        );
 
         // Process each event
         for (const event of Object.values(events)) {
