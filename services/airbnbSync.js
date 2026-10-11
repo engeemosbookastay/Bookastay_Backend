@@ -75,6 +75,7 @@ export async function syncFromAirbnb() {
     let totalNewBookings = 0;
     let totalExistingBookings = 0;
     let totalUpdatedBookings = 0;
+    let totalRemovedBookings = 0;
     let totalErrors = 0;
     let totalEventsProcessed = 0;
 
@@ -234,13 +235,46 @@ export async function syncFromAirbnb() {
           }
         }
 
+        // RECONCILE: remove upcoming synced bookings for this property that Airbnb no
+        // longer lists (cancelled, moved to another listing, or expired rolling blocks).
+        // Only runs after a successful fetch, so a network failure never wipes bookings.
+        const today = new Date().toISOString().split('T')[0];
+        const { data: storedRows, error: storedError } = await supabaseAdmin
+          .from('bookings')
+          .select('id, airbnb_uid, check_in, check_out')
+          .eq('source', 'airbnb')
+          .eq('room_type', config.room_type)
+          .not('airbnb_uid', 'is', null)
+          .gte('check_out', today);
+
+        if (storedError) {
+          console.error('Error loading stored Airbnb bookings for reconcile:', storedError);
+          errorCount++;
+        } else {
+          const staleRows = (storedRows || []).filter(r => !feedUids.has(r.airbnb_uid));
+          if (staleRows.length > 0) {
+            staleRows.forEach(r => console.log(`Removing stale Airbnb booking ${r.id} for ${config.room_type}: ${r.check_in} to ${r.check_out} (no longer in feed)`));
+            const { error: deleteError } = await supabaseAdmin
+              .from('bookings')
+              .delete()
+              .in('id', staleRows.map(r => r.id));
+            if (deleteError) {
+              console.error('Error removing stale Airbnb bookings:', deleteError);
+              errorCount++;
+            } else {
+              removedBookingsCount = staleRows.length;
+            }
+          }
+        }
+
         // Accumulate totals
         totalNewBookings += newBookingsCount;
         totalExistingBookings += existingBookingsCount;
         totalUpdatedBookings += updatedBookingsCount;
+        totalRemovedBookings += removedBookingsCount;
         totalErrors += errorCount;
 
-        console.log(`${config.name} sync: +${newBookingsCount} new, ~${updatedBookingsCount} updated, =${existingBookingsCount} skipped, !${errorCount} errors`);
+        console.log(`${config.name} sync: +${newBookingsCount} new, ~${updatedBookingsCount} updated, -${removedBookingsCount} removed, =${existingBookingsCount} skipped, !${errorCount} errors`);
 
       } catch (calendarError) {
         console.error(`Error syncing ${config.name}:`, calendarError);
@@ -255,6 +289,7 @@ export async function syncFromAirbnb() {
     console.log('==========================================');
     console.log('  New bookings added:', totalNewBookings);
     console.log('  Bookings updated:', totalUpdatedBookings);
+    console.log('  Stale bookings removed:', totalRemovedBookings);
     console.log('  Existing bookings skipped:', totalExistingBookings);
     console.log('  Errors encountered:', totalErrors);
     console.log('  Total events processed:', totalEventsProcessed);
@@ -265,6 +300,7 @@ export async function syncFromAirbnb() {
       success: true,
       newBookings: totalNewBookings,
       updatedBookings: totalUpdatedBookings,
+      removedBookings: totalRemovedBookings,
       existingBookings: totalExistingBookings,
       errors: totalErrors,
       totalProcessed: totalEventsProcessed
