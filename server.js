@@ -56,7 +56,9 @@ app.use(cors(corsOptions));
 // Handle pre-flight OPTIONS for all routes
 app.options('*splat', cors(corsOptions));
 
-app.use(express.json());
+// Raised from the 100kb default so large content saves (e.g. House Rules
+// with many paragraphs) aren't rejected with 413.
+app.use(express.json({ limit: '5mb' }));
 app.use(cookieParser());
 
 // Run every 10 minutes

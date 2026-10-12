@@ -5,6 +5,7 @@ import { uploadBuffer } from '../services/cloudinaryClient.js';
 // PUBLIC — Get all site content
 // ==========================================
 export const getAllContent = async (req, res) => {
+  res.set('Cache-Control', 'no-store');
   try {
     const { data, error } = await supabaseAdmin
       .from('site_content')
@@ -29,6 +30,7 @@ export const getAllContent = async (req, res) => {
 // PUBLIC — Get single content by key
 // ==========================================
 export const getContent = async (req, res) => {
+  res.set('Cache-Control', 'no-store');
   try {
     const { key } = req.params;
 
@@ -36,9 +38,12 @@ export const getContent = async (req, res) => {
       .from('site_content')
       .select('*')
       .eq('key', key)
-      .single();
+      .maybeSingle();
 
-    if (error || !data) {
+    // A real DB error must not look like "never saved" — the frontend only
+    // falls back to bundled defaults on 404.
+    if (error) throw error;
+    if (!data) {
       return res.status(404).json({ success: false, message: 'Content not found' });
     }
 
@@ -49,16 +54,52 @@ export const getContent = async (req, res) => {
   }
 };
 
+// Normalise House Rules before storing: keep rule + paragraph order exactly as
+// the admin arranged them, fold the legacy "extra" field into paragraphs, and
+// drop empty paragraphs. Unknown fields (details, etc.) are preserved.
+const str = (v) => (typeof v === 'string' ? v : v == null ? '' : String(v));
+const normalizeHouseRules = (value) => {
+  if (!value || !Array.isArray(value.rules)) return null;
+  const rules = value.rules
+    .filter(r => r && typeof r === 'object')
+    .map(r => {
+      const paragraphs = (Array.isArray(r.paragraphs) ? r.paragraphs : [])
+        .map(str)
+        .filter(p => p.trim());
+      const extra = str(r.extra).trim();
+      if (extra && !paragraphs.includes(extra)) paragraphs.unshift(extra);
+      return {
+        ...r,
+        title: str(r.title).trim(),
+        category: str(r.category).trim(),
+        content: str(r.content),
+        extra: '',
+        paragraphs,
+        details: Array.isArray(r.details) ? r.details : [],
+      };
+    })
+    .filter(r => r.title || r.content.trim() || r.paragraphs.length);
+  return { ...value, rules };
+};
+
 // ==========================================
 // ADMIN — Upsert (create or update) content
 // ==========================================
 export const upsertContent = async (req, res) => {
   try {
     const { key } = req.params;
-    const { title, value } = req.body;
+    const { title } = req.body;
+    let { value } = req.body;
 
     if (!value) {
       return res.status(400).json({ success: false, message: 'value is required' });
+    }
+
+    if (key === 'house_rules') {
+      value = normalizeHouseRules(value);
+      if (!value) {
+        return res.status(400).json({ success: false, message: 'house_rules must be { rules: [...] }' });
+      }
     }
 
     const { data, error } = await supabaseAdmin
