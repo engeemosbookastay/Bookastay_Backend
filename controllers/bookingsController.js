@@ -513,6 +513,36 @@ const parseDate = (dateString) => {
     return isNaN(d.getTime()) ? null : d;
 };
 
+// Guest agreements ticked on the booking form (House Rules, Privacy, Cancellation).
+// FormData sends booleans as the string 'true'.
+const isAgreed = (v) => v === true || v === 'true';
+const agreementFields = (body) => {
+    const agreed_house_rules = isAgreed(body.agreed_house_rules);
+    const agreed_privacy_policy = isAgreed(body.agreed_privacy_policy);
+    const agreed_cancellation_policy = isAgreed(body.agreed_cancellation_policy);
+    return {
+        agreed_house_rules,
+        agreed_privacy_policy,
+        agreed_cancellation_policy,
+        agreements_accepted_at: agreed_house_rules && agreed_privacy_policy && agreed_cancellation_policy
+            ? new Date().toISOString()
+            : null,
+    };
+};
+
+// Insert a paid booking. If the agreement columns haven't been added to the DB yet
+// (PGRST204 = unknown column), retry without them — a paid booking must never fail
+// just because the migration hasn't been run.
+const insertPaidBooking = async (payload) => {
+    let result = await supabaseAdmin.from('bookings').insert([payload]).select().maybeSingle();
+    if (result.error?.code === 'PGRST204' && /agree/.test(result.error.message || '')) {
+        console.warn('⚠️ Agreement columns missing — run migrations/booking_agreements_2026.sql. Saving booking without them.');
+        const { agreed_house_rules, agreed_privacy_policy, agreed_cancellation_policy, agreements_accepted_at, ...rest } = payload;
+        result = await supabaseAdmin.from('bookings').insert([rest]).select().maybeSingle();
+    }
+    return result;
+};
+
 const calculateNights = (check_in, check_out) => {
     const inDate = parseDate(check_in);
     const outDate = parseDate(check_out);
@@ -838,18 +868,17 @@ export const confirmBooking = async (req, res) => {
             }
             console.log('✅ Room available');
 
-            // Fetch live price from DB if available
-            const propSettings = await getPropertyPrice(requestedRoom);
-            const nights = calculateNights(checkIn, checkOut);
-            const basePricePerNight = propSettings?.base_price ||
-                (requestedRoom.toLowerCase() === 'entire' ? PRICE_ENTIRE_APARTMENT : PRICE_SINGLE_ROOM);
             const guests = Number(body.guests) || 1;
-            const extraGuestFee = guests > 2 ? (guests - 2) * EXTRA_GUEST_PER_NIGHT * nights : 0;
-            const fullPrice = basePricePerNight * nights + CLEANING_FEE + SERVICE_FEE + extraGuestFee;
 
-            // Apply discount
+            // Price = what the guest was actually charged (verified with the provider above).
+            // Do NOT recompute from base price + cleaning/service fees: the website never
+            // charges those, and doing so inflated emails/receipts by ₦45,000.
             const discount_amount = discount_amount_client; // already validated on frontend
-            const priceAfterDiscount = Math.max(0, fullPrice - discount_amount);
+            const clientTotal = Number(body.original_price) || 0; // site total, discount code already applied
+            const priceAfterDiscount = payment_type === 'deposit' && clientTotal
+                ? Math.max(paidAmount, clientTotal)
+                : paidAmount;
+            const fullPrice = priceAfterDiscount + discount_amount; // before the discount code
 
             // Deposit logic
             let balance_due = 0;
@@ -881,13 +910,10 @@ export const confirmBooking = async (req, res) => {
                 paid_amount: paidAmount,
                 status: 'confirmed',
                 source: 'website',
+                ...agreementFields(body),
             };
 
-            const { data, error } = await supabaseAdmin
-                .from('bookings')
-                .insert([bookingPayload])
-                .select()
-                .maybeSingle();
+            const { data, error } = await insertPaidBooking(bookingPayload);
 
             if (error) throw error;
             console.log('✅ Booking created:', data?.id);
@@ -1077,13 +1103,10 @@ export const capturePayPalOrder = async (req, res) => {
             paid_amount: paidAmount,
             status: 'confirmed',
             source: 'website',
+            ...agreementFields(bookingBody),
         };
 
-        const { data, error } = await supabaseAdmin
-            .from('bookings')
-            .insert([bookingPayload])
-            .select()
-            .maybeSingle();
+        const { data, error } = await insertPaidBooking(bookingPayload);
 
         if (error) throw error;
 

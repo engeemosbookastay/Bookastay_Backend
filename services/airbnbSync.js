@@ -100,8 +100,11 @@ export async function syncFromAirbnb() {
 
         // Every UID currently in the feed — anything we stored that is no longer here
         // was cancelled or moved on Airbnb and must stop blocking dates.
+        // Stored per apartment (uid#room_key): Airbnb repeats the same reservation UID in
+        // every linked listing's feed, and each of those apartments must be blocked.
+        const storedUid = (uid) => `${uid}#${config.room_type}`;
         const feedUids = new Set(
-          Object.values(events).filter(e => e.type === 'VEVENT' && e.uid).map(e => e.uid)
+          Object.values(events).filter(e => e.type === 'VEVENT' && e.uid).map(e => storedUid(e.uid))
         );
 
         // Process each event
@@ -127,8 +130,8 @@ export async function syncFromAirbnb() {
             continue;
           }
 
-          const airbnbUid = event.uid;
-          const transactionRef = event.uid;
+          const airbnbUid = storedUid(event.uid);
+          const transactionRef = airbnbUid;
 
           totalEventsProcessed++;
 
