@@ -61,11 +61,18 @@ app.options('*splat', cors(corsOptions));
 app.use(express.json({ limit: '5mb' }));
 app.use(cookieParser());
 
-// Run every 10 minutes
-cron.schedule('*/10 * * * *', () => {
-  console.log('Running Airbnb calendar sync...');
-  syncFromAirbnb();
-});
+// Run every 10 minutes — on the deployed server only (Render sets RENDER=true).
+// Local dev servers share the same database; letting each one sync too made them
+// add/remove the same Airbnb rows out of step. Set ENABLE_AIRBNB_SYNC=true to force it locally.
+const SYNC_ENABLED = process.env.RENDER === 'true' || process.env.ENABLE_AIRBNB_SYNC === 'true';
+if (SYNC_ENABLED) {
+  cron.schedule('*/10 * * * *', () => {
+    console.log('Running Airbnb calendar sync...');
+    syncFromAirbnb();
+  });
+} else {
+  console.log('Airbnb sync disabled on this machine (not Render). Set ENABLE_AIRBNB_SYNC=true to enable.');
+}
 
 // Ping self every 14 minutes to prevent Render free tier cold starts
 cron.schedule('*/14 * * * *', async () => {
