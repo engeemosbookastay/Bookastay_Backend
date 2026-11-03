@@ -456,13 +456,19 @@ const sendCustomerEmail = async (toEmail, bookingData, pdfPath) => {
     }
 };
 
+// Extra inboxes that get the same "New Booking" copy as the business email.
+// Override with CLIENT_NOTIFICATION_COPY (comma-separated) in .env / Render.
+const NOTIFICATION_COPY_EMAILS = (process.env.CLIENT_NOTIFICATION_COPY ?? 'engeemosbookastay@gmail.com')
+    .split(',').map(e => e.trim()).filter(Boolean);
+
 const sendClientNotification = async (bookingData, pdfPath) => {
     const clientEmail = process.env.CLIENT_NOTIFICATION_EMAIL || process.env.EMAIL_USER;
-    console.log('📧 Sending client notification to:', clientEmail);
+    const recipients = [...new Set([clientEmail, ...NOTIFICATION_COPY_EMAILS].map(e => e.toLowerCase()))];
+    console.log('📧 Sending client notification to:', recipients.join(', '));
 
     const mailOptions = {
         from: `"Engeemos Bookastay System" <${process.env.EMAIL_USER}>`,
-        to: clientEmail,
+        to: recipients,
         subject: `🎉 New Booking: ${bookingData.name} - ₦${Number(bookingData.price).toLocaleString()}`,
         html: generateClientEmailHTML(bookingData),
         attachments: pdfPath && fs.existsSync(pdfPath) ? [{
