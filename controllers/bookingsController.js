@@ -1219,3 +1219,5 @@ export const simulatePayment = async (req, res) => {
 };
 
 export { checkRangeOverlap };
+// Used by scripts/resendBookingEmail.js to resend a notification that failed.
+export { sendClientNotification, sendCustomerEmail, generateReceiptPDF };
