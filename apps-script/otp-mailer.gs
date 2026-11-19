@@ -93,6 +93,19 @@ function doPost(e) {
     };
     if (SENDER_EMAIL) mailOpts.from = SENDER_EMAIL;
 
+    // Optional attachments (booking receipt PDF): [{ filename, mimeType, contentBase64 }]
+    if (Array.isArray(data.attachments) && data.attachments.length) {
+      mailOpts.attachments = data.attachments
+        .filter(function (a) { return a && a.contentBase64; })
+        .map(function (a) {
+          return Utilities.newBlob(
+            Utilities.base64Decode(a.contentBase64),
+            a.mimeType || 'application/pdf',
+            a.filename || 'attachment.pdf'
+          );
+        });
+    }
+
     try {
       MailApp.sendEmail(mailOpts);
     } catch (fromErr) {

@@ -10,6 +10,7 @@ import PDFDocument from 'pdfkit';
 import axios from 'axios';
 import { incrementDiscountUsage } from './discountsController.js';
 import { normalizePhone } from '../utils/phone.js';
+import { deliverEmail } from '../services/emailDelivery.js';
 import { isCheckInTooSoon, LEAD_TIME_MESSAGE } from '../utils/leadTime.js';
 
 
@@ -447,7 +448,7 @@ const sendCustomerEmail = async (toEmail, bookingData, pdfPath) => {
     };
 
     try {
-        const info = await transporter.sendMail(mailOptions);
+        const info = await deliverEmail(transporter, mailOptions);
         console.log('✅ Customer email sent:', info.messageId);
         return info;
     } catch (error) {
@@ -478,12 +479,49 @@ const sendClientNotification = async (bookingData, pdfPath) => {
     };
 
     try {
-        const info = await transporter.sendMail(mailOptions);
+        const info = await deliverEmail(transporter, mailOptions);
         console.log('✅ Client notification sent:', info.messageId);
         return info;
     } catch (error) {
         console.error('❌ Client notification failed:', error.message);
         throw error;
+    }
+};
+
+// A guest PAID but the booking could not be saved (dates taken meanwhile, DB error…).
+// Email the business straight away with everything needed to sort it out or refund.
+const alertPaidBookingFailed = async (body, paymentRef, paidAmount, reason) => {
+    const clientEmail = process.env.CLIENT_NOTIFICATION_EMAIL || process.env.EMAIL_USER;
+    const recipients = [...new Set([clientEmail, ...NOTIFICATION_COPY_EMAILS].map(e => e.toLowerCase()))];
+    const esc = (v) => String(v ?? '—').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+    const row = (k, v) => `<tr><td style="padding:6px 12px;color:#555;">${k}</td><td style="padding:6px 12px;"><strong>${esc(v)}</strong></td></tr>`;
+    const html = `
+        <div style="font-family:Arial,sans-serif;max-width:560px;">
+          <h2 style="color:#b91c1c;">⚠️ Payment received but booking NOT saved</h2>
+          <p>A guest paid on the website, but the booking could not be completed. Please contact the guest to confirm their stay or arrange a refund.</p>
+          <p><strong>Reason:</strong> ${reason}</p>
+          <table style="border-collapse:collapse;background:#f9fafb;">
+            ${row('Paystack reference', paymentRef)}
+            ${row('Amount paid', `₦${Number(paidAmount || 0).toLocaleString()}`)}
+            ${row('Guest name', body.name)}
+            ${row('Email', body.email)}
+            ${row('Phone', body.phone)}
+            ${row('Apartment', body.room_type)}
+            ${row('Check-in', body.check_in_date || body.check_in)}
+            ${row('Check-out', body.check_out_date || body.check_out)}
+            ${row('Guests', body.guests)}
+          </table>
+        </div>`;
+    try {
+        await deliverEmail(transporter, {
+            from: `"Engeemos Bookastay System" <${process.env.EMAIL_USER}>`,
+            to: recipients,
+            subject: `⚠️ ACTION NEEDED: ${body.name || 'Guest'} paid ₦${Number(paidAmount || 0).toLocaleString()} but booking failed`,
+            html,
+        });
+        console.log('📧 Paid-but-failed alert sent to:', recipients.join(', '));
+    } catch (e) {
+        console.error('❌ Paid-but-failed alert could not be sent:', e.message);
     }
 };
 
@@ -796,6 +834,7 @@ export const createBooking = async (req, res) => {
 // CONFIRM BOOKING (Paystack, Klump, Deposit)
 // ============================================
 export const confirmBooking = async (req, res) => {
+    let paidContext = null; // set once the payment is verified — any failure after that needs a human
     try {
         console.log('');
         console.log('=== CONFIRM BOOKING STARTED ===');
@@ -868,8 +907,11 @@ export const confirmBooking = async (req, res) => {
             const checkIn = body.check_in_date || body.check_in;
             const checkOut = body.check_out_date || body.check_out;
 
+            paidContext = { ref: payment_reference, amount: paidAmount };
+
             const overlapCheck = await checkRangeOverlap(requestedRoom, checkIn, checkOut);
             if (overlapCheck.overlapping) {
+                await alertPaidBookingFailed(body, payment_reference, paidAmount, overlapCheck.message);
                 return res.status(409).json({ success: false, error: overlapCheck.message });
             }
             console.log('✅ Room available');
@@ -970,6 +1012,9 @@ export const confirmBooking = async (req, res) => {
         res.status(400).json({ success: false, error: 'Unsupported payment provider' });
     } catch (err) {
         console.error('❌ ERROR:', err.message);
+        if (paidContext) {
+            await alertPaidBookingFailed(req.body || {}, paidContext.ref, paidContext.amount, err.message);
+        }
         res.status(500).json({
             success: false,
             message: 'Failed to confirm booking',
