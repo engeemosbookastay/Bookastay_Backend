@@ -1,0 +1,431 @@
+{
+  "getting_around": {
+    "categories": [
+      {
+        "key": "tourism",
+        "title": "Tourism, Play & Games",
+        "items": [
+          {
+            "name": "Olumo Rock (historical sightseeing point)",
+            "time": "15-17 mins",
+            "link": "https://www.google.com/maps/place/Olumo+Rock+Tourist+Centre/data=!4m2!3m1!1s0x0:0x8b3b657ec52d6ca2?sa=X&ved=1t:2428&ictx=111"
+          },
+          {
+            "name": "Nike Art Gallery (same location as Olumo Rock)",
+            "time": "15-17 mins",
+            "link": "https://www.google.com/maps/place/Olumo+Rock+Tourist+Centre/data=!4m2!3m1!1s0x0:0x8b3b657ec52d6ca2?sa=X&ved=1t:2428&ictx=111"
+          },
+          {
+            "name": "Kuti Heritage Museum, Isabo (Ransome-Kuti family-focused)",
+            "time": "15-17 mins",
+            "link": "https://www.google.com/maps/place/The+Kuti+Heritage+Museum/data=!4m2!3m1!1s0x0:0xbf071edbaf512766?sa=X&ved=1t:2428&hl=en&ictx=111"
+          },
+          {
+            "name": "OOPL Wildlife Park (mini-zoo experience for kids and adults)",
+            "time": "19-22 mins",
+            "link": "https://www.google.com/maps/place/OOPL+WILDLIFE+PARK/data=!4m2!3m1!1s0x0:0xd56fd816953819c9?sa=X&ved=1t:2428&hl=en&ictx=111"
+          },
+          {
+            "name": "OOPL Rounda Fun Spot (play options for kids)",
+            "time": "16-21 mins",
+            "link": "https://www.google.com/maps/place/OOPL+Rounda+Fun+Spot/data=!4m2!3m1!1s0x0:0x444ed0adf08f927a?sa=X&ved=1t:2428&hl=en&ictx=111"
+          },
+          {
+            "name": "Adonis Plaza Paintball and Games (multiple games options)",
+            "time": "21-25 mins",
+            "link": "https://www.google.com/maps/place/Muda+Lawal+Stadium/data=!4m2!3m1!1s0x0:0xaf0350ccb7acbb9a?sa=X&ved=1t:2428&hl=en&ictx=111"
+          },
+          {
+            "name": "Funsation Games & Entertainment, Oke-Ilewo",
+            "time": "13-15 mins",
+            "link": "https://www.google.com/maps/place/Funsation+Games+and+Entertainment+Center/data=!4m2!3m1!1s0x0:0x3be61307be257838?sa=X&ved=1t:2428&hl=en&ictx=111"
+          },
+          {
+            "name": "FoodCo Akin-Olugbade Social Centre (kids play area)",
+            "time": "8 mins",
+            "link": "https://www.google.com/maps/place/FoodCo+Akin-Olugbade+Social+Centre/data=!4m2!3m1!1s0x0:0x6bdaa90f7fdcf79?sa=X&ved=1t:2428&hl=en&ictx=111"
+          },
+          {
+            "name": "OOPL Cinemas, Oke-Mosan",
+            "time": "19-23 mins",
+            "link": "https://www.google.com/maps/place/OOPL+Cinemas/data=!4m2!3m1!1s0x0:0x9dbe344ed6f63164?sa=X&ved=1t:2428&hl=en&ictx=111"
+          },
+          {
+            "name": "OOPL Aje Place Cinemas & Lounge, Panseke",
+            "time": "13 mins",
+            "link": "https://www.google.com/maps/place/OOPL+Aje+Place+Cinemas+%26+Lounge/data=!4m2!3m1!1s0x0:0x59afe40419450c3c?sa=X&ved=1t:2428&hl=en&ictx=111"
+          },
+          {
+            "name": "Centenary Hall, Ake (historical sight)",
+            "time": "15 mins",
+            "link": "https://www.google.com/maps/place/Centenary+Hall-+Abeokuta/data=!4m2!3m1!1s0x0:0x7283ef228c31d42?sa=X&ved=1t:2428&hl=en&ictx=111"
+          },
+          {
+            "name": "Alake Palace Ground (historic seat of the Alake of Egbaland)",
+            "time": "18 mins",
+            "link": "https://www.google.com/maps/place/Alake+Palace+Ground/data=!4m2!3m1!1s0x0:0xd1648f6fc8d87370?sa=X&ved=1t:2428&hl=en&ictx=111"
+          },
+          {
+            "name": "Adire Mall, Itoku (for different styles and prints of adire)",
+            "time": "15 mins",
+            "link": "https://www.google.com/maps/place/Adire+Mall,+Itoku/data=!4m2!3m1!1s0x0:0x638c56a3be4b135a?sa=X&ved=1t:2428&hl=en&ictx=111"
+          }
+        ]
+      },
+      {
+        "key": "food",
+        "title": "Food & Dining",
+        "items": [
+          {
+            "name": "Burger King Oke-Ilewo (fast food)",
+            "time": "13 mins",
+            "link": "https://www.google.com/maps/place/burger+king+oke+ilewo+abeokuta/data=!4m2!3m1!1s0x103a4d0000e34531:0x9ac7dd5f0c7b75a?sa=X&ved=1t:242&hl=en&ictx=111"
+          },
+          {
+            "name": "SUPERFOODS Oke-Ilewo (fast food)",
+            "time": "11 mins",
+            "link": "https://www.google.com/maps/place/SUPERFOODS+Abeokuta/data=!4m2!3m1!1s0x103a4c7175ee7779:0x9957b6fe87e92e1b?sa=X&ved=1t:242&ictx=111"
+          },
+          {
+            "name": "Domino's Pizza Abeokuta",
+            "time": "10 mins",
+            "link": "https://www.google.com/maps/place/Dominos+Pizza+Abeokuta/data=!4m2!3m1!1s0x0:0xdc5f00b31973f0c9?sa=X&ved=1t:2428&ictx=111"
+          },
+          {
+            "name": "Sweet Sensation Oke-Ilewo (fast food)",
+            "time": "12 mins",
+            "link": "https://www.google.com/maps/place/Sweet+Sensation+(Abeokuta)/data=!4m2!3m1!1s0x0:0x8cd34ac69aab5f16?sa=X&ved=1t:2428&hl=en&ictx=111"
+          },
+          {
+            "name": "WokCity Restaurant Oke-Ilewo (multiple options)",
+            "time": "12 mins",
+            "link": "https://www.google.com/maps/place/WokCity+Restaurant+Ibara+Abeokuta/data=!4m2!3m1!1s0x0:0xb709d11ef8207105?sa=X&ved=1t:2428&hl=en&ictx=111"
+          },
+          {
+            "name": "CHOW TOWN Adigbe (Rice, Pasta/Noodles & Sandwiches)",
+            "time": "19 mins",
+            "link": "https://www.google.com/maps/place/CHOW+TOWN/data=!4m2!3m1!1s0x0:0x427a1b74f8a94ed?sa=X&ved=1t:2428&hl=en&ictx=111"
+          },
+          {
+            "name": "Halaga Restaurant Ope Oluwa Ita Oshin (local food)",
+            "time": "8 mins",
+            "link": "https://www.google.com/maps/place/Halaga+Restaurant/data=!4m2!3m1!1s0x0:0x9a6509df71cf0f88?sa=X&ved=1t:2428&ictx=111"
+          },
+          {
+            "name": "South Kitchen & Lounge Ibara Housing (fine dining)",
+            "time": "18-20 mins",
+            "link": "https://www.google.com/maps/place/south+kitchen+and+lounge+abeokuta/data=!4m2!3m1!1s0x103a4be7c6c2d9c3:0xe1a17fc0472294e8?sa=X&ved=1t:242&hl=en&ictx=111"
+          },
+          {
+            "name": "Royal Mandarin Restaurant Ibara Housing (fine dining)",
+            "time": "17 mins",
+            "link": "https://www.google.com/maps/place/Royal+mandarin+restaurant/data=!4m2!3m1!1s0x0:0xa1d3a9f9d17f2ac8?sa=X&ved=1t:2428&hl=en&ictx=111"
+          }
+        ]
+      },
+      {
+        "key": "nightlife",
+        "title": "Night Life (Clubs)",
+        "items": [
+          {
+            "name": "Quench Nightlife (Quarry Imperial Hotel)",
+            "time": "11 mins",
+            "link": "https://www.google.com/maps/place/quench+nightlife+abeokuta/data=!4m2!3m1!1s0x103a4dc17cf414cd:0x6845d81057ea6494?sa=X&ved=1t:242&ictx=111"
+          },
+          {
+            "name": "BarCode Lounge (off Quarry Road)",
+            "time": "11 mins",
+            "link": "https://www.google.com/maps/place/BarCode+lounge+Abk/data=!4m2!3m1!1s0x0:0xea0cd2b3fe2b895a?sa=X&ved=1t:2428&hl=en&ictx=111"
+          },
+          {
+            "name": "Red Dot Club (Ita Eko)",
+            "time": "10 mins",
+            "link": "https://www.google.com/maps/place/Red+Dot+Club/data=!4m2!3m1!1s0x0:0xc116546d5d76f268?sa=X&ved=1t:2428&hl=en&ictx=111"
+          },
+          {
+            "name": "XO RestoBar (off Akin Olugbade Road)",
+            "time": "9 mins",
+            "link": "https://www.google.com/maps/place/XO+RestoBar/data=!4m2!3m1!1s0x0:0xe3ae6a313f8f9c2e?sa=X&ved=1t:2428&hl=en&ictx=111"
+          },
+          {
+            "name": "Elysium Oasis (Onikolobo area)",
+            "time": "11 mins",
+            "link": "https://www.google.com/maps/place/Elysium+Oasis/data=!4m2!3m1!1s0x0:0x6d6d212934fdff56?sa=X&ved=1t:2428&hl=en&ictx=111"
+          },
+          {
+            "name": "The South Club (Leme/NNPC area)",
+            "time": "16 mins",
+            "link": "https://www.google.com/maps/place/The+South+Club/data=!4m2!3m1!1s0x0:0xe629a4c03e6104be?sa=X&ved=1t:2428&ictx=111"
+          }
+        ]
+      },
+      {
+        "key": "atm",
+        "title": "ATM Options",
+        "items": [
+          {
+            "name": "WEMA Bank ATM (Lafenwa)",
+            "time": "9 mins",
+            "link": "https://www.google.com/maps/place/Wema+Bank+-+Lafenwa/data=!4m2!3m1!1s0x0:0x13b83cbf747dac66?sa=X&ved=1t:2428&hl=en&ictx=111"
+          },
+          {
+            "name": "Polaris Bank ATM (Oke-Ilewo/Ibara)",
+            "time": "12 mins",
+            "link": "https://www.google.com/maps/place/Polaris+Bank+Limited/data=!4m2!3m1!1s0x0:0x1bb152198e5f5cc6?sa=X&ved=1t:2428&hl=en&ictx=111"
+          },
+          {
+            "name": "UBA ATM (Ita-Eko)",
+            "time": "10 mins",
+            "link": "https://www.google.com/maps/place/United+Bank+for+Africa/data=!4m2!3m1!1s0x0:0xae29cb562e06f62a?sa=X&ved=1t:2428&hl=en&ictx=111"
+          },
+          {
+            "name": "GTB ATM (IBB Boulevard)",
+            "time": "12 mins",
+            "link": "https://www.google.com/maps/place/Guaranty+Trust+Bank+PLC+Kuto+Abeokuta/data=!4m2!3m1!1s0x0:0x2637eef8f199847d?sa=X&ved=1t:2428&hl=en&ictx=111"
+          },
+          {
+            "name": "Access Bank ATM (Oke-Ilewo)",
+            "time": "13 mins",
+            "link": "https://www.google.com/maps/place/Access+Bank+Plc+Oke+Ilewo+Branch/data=!4m2!3m1!1s0x0:0xa4440a234118d531?sa=X&ved=1t:2428&hl=en&ictx=111"
+          },
+          {
+            "name": "FCMB ATM (Oke-Ilewo)",
+            "time": "11 mins",
+            "link": "https://www.google.com/maps/place/FCMB+Abeokuta+Branch/data=!4m2!3m1!1s0x0:0x38132a8454f02dd9?sa=X&ved=1t:2428&hl=en&ictx=111"
+          }
+        ]
+      },
+      {
+        "key": "supermarkets",
+        "title": "Grocery Stores/Supermarkets",
+        "items": [
+          {
+            "name": "FoodCo Supermarket Akin Olugbade",
+            "time": "8 mins",
+            "link": "https://www.google.com/maps/place/FoodCo+Akin-Olugbade+Social+Centre/data=!4m2!3m1!1s0x0:0x6bdaa90f7fdcf79?sa=X&ved=1t:2428&ictx=111"
+          },
+          {
+            "name": "Justrite Superstore Lafenwa",
+            "time": "8 mins",
+            "link": "https://www.google.com/maps/place/Justrite+Superstores+lafenwa/data=!4m2!3m1!1s0x0:0x9fe704b6f24bdae3?sa=X&ved=1t:2428&hl=en&ictx=111"
+          },
+          {
+            "name": "Justrite Superstore Ibara",
+            "time": "13 mins",
+            "link": "https://www.google.com/maps/place/Justrite+Superstore+Ibara,+Abeokuta/data=!4m2!3m1!1s0x0:0x6055edc019c82d83?sa=X&ved=1t:2428&ictx=111"
+          },
+          {
+            "name": "Bestdeal Supermarket Oke-Ilewo",
+            "time": "13 mins",
+            "link": "https://www.google.com/maps/place/Bestdeal+Supermarket+Oke-ilewo/data=!4m2!3m1!1s0x0:0x283605172c635e8a?sa=X&ved=1t:2428&hl=en&ictx=111"
+          },
+          {
+            "name": "Shalom Megastores Oke-Ilewo",
+            "time": "13 mins",
+            "link": "https://www.google.com/maps/place/shalom+mega+stores+oke-ilewo+abeokuta/data=!4m2!3m1!1s0x103a4c77f6b6b327:0x6ee76a5b7168a8da?sa=X&ved=1t:242&hl=en&ictx=111"
+          }
+        ]
+      },
+      {
+        "key": "fuel",
+        "title": "Filling Stations",
+        "items": [
+          {
+            "name": "Bovas Filling Station (along Ita-Oshin road)",
+            "time": "6 mins",
+            "link": "https://www.google.com/maps/place/Bovas+Filling+Station/data=!4m2!3m1!1s0x0:0x5d102ab52a106ede?sa=X&ved=1t:2428&hl=en&ictx=111"
+          },
+          {
+            "name": "NNPC Filling Station (Ita-Oshin)",
+            "time": "6 mins",
+            "link": "https://www.google.com/maps/place/NNPC+-+Ita-Oshin+Filling+Station/data=!4m2!3m1!1s0x0:0xa8ea96058bc51c06?sa=X&ved=1t:2428&hl=en&ictx=111"
+          },
+          {
+            "name": "NNPC Filling Station (Akin Olugbade)",
+            "time": "9 mins",
+            "link": "https://maps.app.goo.gl/TjkmGocmpnXSpsCdA"
+          },
+          {
+            "name": "World Oil Filling Station (Oke-Ilewo)",
+            "time": "11 mins",
+            "link": "https://www.google.com/maps/place/World+Oil+Nigeria+Limited/data=!4m2!3m1!1s0x0:0xf28be25caf21c578?sa=X&ved=1t:2428&hl=en&ictx=111"
+          }
+        ]
+      },
+      {
+        "key": "markets",
+        "title": "Local Markets",
+        "items": [
+          {
+            "name": "Olomore Market",
+            "time": "5-6 mins",
+            "link": "https://www.google.com/maps/place/Olomore+Market/data=!4m2!3m1!1s0x0:0x3d667733607ee4c1?sa=X&ved=1t:2428&ictx=111"
+          },
+          {
+            "name": "Lafenwa Market",
+            "time": "8-10 mins",
+            "link": "https://www.google.com/maps/place/Lafenwa+Market/data=!4m2!3m1!1s0x0:0x82f5b5e9d6fd1459?sa=X&ved=1t:2428&ictx=111"
+          },
+          {
+            "name": "Omida Market",
+            "time": "12-15 mins",
+            "link": "https://www.google.com/maps/place/Omida+Shopping+Complex+Abeokuta/data=!4m2!3m1!1s0x0:0xcfcbddbb8b59d9bf?sa=X&ved=1t:2428&ictx=111"
+          }
+        ]
+      }
+    ]
+  },
+  "cancellation_policy": {
+    "items": [
+      {
+        "title": "Reservation Confirmation",
+        "content": [
+          "All reservations are considered confirmed only after full payment has been received and a booking confirmation has been issued by Engeemos Bookastay Apartments."
+        ]
+      },
+      {
+        "title": "Check-in Day Cancellations",
+        "content": [
+          "Cancellations made on the day of check-in are non-refundable."
+        ]
+      },
+      {
+        "title": "Booking made a week or less to check-in date",
+        "content": [
+          "Cancellations made 72 hours or more before the scheduled check-in time will be eligible for a full refund, excluding any non-refundable processing or transaction fees (if applicable).",
+          "Cancellations made less than 72 hours before check-in will attract a charge equivalent to either one (1) night's stay or 50% of the total booking amount, whichever is higher."
+        ]
+      },
+      {
+        "title": "Booking made 2 weeks but less than a month to check-in date",
+        "content": [
+          "Cancellations made 5 days or more before the scheduled check-in time will be eligible for a full refund, excluding any non-refundable processing or transaction fees (if applicable).",
+          "Cancellations made less than 5 days before check-in will attract a charge equivalent to 50% of the total booking amount."
+        ]
+      },
+      {
+        "title": "Booking made within 1 month or more of check-in",
+        "content": [
+          "Cancellations made 10 days or more before the scheduled check-in time will be eligible for a full refund, excluding any non-refundable processing or transaction fees (if applicable).",
+          "Cancellations made less than 10 days before check-in will attract a charge equivalent to 50% of the total booking amount."
+        ]
+      },
+      {
+        "title": "No-Show",
+        "content": [
+          "If a guest fails to arrive on the scheduled check-in date without prior notice, the booking will be treated as a no-show and the full booking amount forfeited."
+        ]
+      },
+      {
+        "title": "Early Check-Out",
+        "content": [
+          "No refunds will be issued for unused nights if a guest checks out earlier than the confirmed check-out date."
+        ]
+      },
+      {
+        "title": "Modification of Bookings",
+        "content": [
+          "Requests to modify booking dates shall be considered but approval is subject to availability."
+        ]
+      },
+      {
+        "title": "Non-refundable Bookings",
+        "content": [
+          "Promotional, discounted, or special-rate bookings may be designated as non-refundable. This will be clearly stated at the time of booking."
+        ]
+      },
+      {
+        "title": "Refund Processing",
+        "content": [
+          "Approved refunds will be processed within 7-14 business days and will be refunded to the original payment method. Bank or payment gateway charges may be deducted where applicable."
+        ]
+      },
+      {
+        "title": "Force Majeure",
+        "content": [
+          "Engeemos Bookastay Apartments shall not be held liable for cancellations or inability to honour bookings due to events beyond our control, including but not limited to natural disasters, government restrictions, strikes, or emergencies. In such cases, we may offer a credit or reschedule at our discretion."
+        ]
+      },
+      {
+        "title": "Policy Updates",
+        "content": [
+          "We reserve the right to update or amend this Cancellation Policy at any time. The version in effect at the time of booking shall apply."
+        ]
+      }
+    ]
+  },
+  "privacy_policy": {
+    "items": [
+      {
+        "title": "Personal Data Collection",
+        "content": [
+          "We collect personal data that you provide when: making reservations or inquiries; communicating with us by phone, email, or messaging apps, and checking in or out of our apartments.",
+          "This information may include full name, email, phone number, address, government-issued identification details, booking information (dates, apartment type, etc.), payment transaction data (via third-party providers), optional information you choose to share with us, website usage data (e.g., cookies), and CCTV footage in common/security areas."
+        ]
+      },
+      {
+        "title": "Manner of Data Collection",
+        "content": [
+          "We obtain personal data from guests via website booking forms, telephone, email, or messaging apps, cookies and analytics on our website."
+        ]
+      },
+      {
+        "title": "Purpose & Legal Basis for Data Processing",
+        "content": [
+          "Collected personal data are processed for purposes including confirming and managing reservations, verifying identity and ensuring guest safety, processing payments and issuing receipts, communicating updates about your stay, complying with legal and regulatory requirements, and improving our services and website experience.",
+          "Under the NDPA 2023, the legal basis for data collection includes your consent, the performance of a contract, legal obligations and legitimate interests (when appropriately balanced with your rights)."
+        ]
+      },
+      {
+        "title": "Consent",
+        "content": [
+          "By using our website or providing personal data when booking or staying with us, you consent to the collection and processing of your personal data as described in this policy.",
+          "You may withdraw your consent at any time, subject to legal or contractual obligations."
+        ]
+      },
+      {
+        "title": "Cookies & Website Tracking",
+        "content": [
+          "We use cookies and similar technologies to make the site function properly, analyse website performance, and tailor consent to improve your experience. A cookie banner will appear on your first visit to obtain consent for non-essential cookies."
+        ]
+      },
+      {
+        "title": "Sharing Your Data",
+        "content": [
+          "We do not sell or rent personal data. We may, however, share data with payment processors for payment handling, IT service providers supporting our systems, security and law enforcement (if required by law), and professional advisors like auditors. Any third party receiving your data must protect it in according with applicable data protection laws."
+        ]
+      },
+      {
+        "title": "Data Security",
+        "content": [
+          "We apply appropriate technical and organisational measures to protect personal data against unauthorised access, loss or corruption, unlawful processing, and data breaches.",
+          "We regularly review these safeguards to improve data security."
+        ]
+      },
+      {
+        "title": "Data Retention",
+        "content": [
+          "We retain personal data only as long as necessary for the fulfilment of reservation services, compliance with legal retention obligations, and handling enquiries or disputes. When data is no longer required, it will be securely deleted or anonymised."
+        ]
+      },
+      {
+        "title": "Your Rights",
+        "content": [
+          "Under the NDPA, you have the right to access your personal data, request correction or update of inaccurate data, request deletion of your data, object to certain processing, restrict processing in specific situations, withdraw consent (where processing is consent-based), and lodge a complaint with the Nigeria Data Protection Commission (NDPC). Contact us to exercise any of these rights."
+        ]
+      },
+      {
+        "title": "Data Breach Notification",
+        "content": [
+          "In case of a confirmed data breach involving your personal data, we will notify you and the relevant authorities in accordance with NDPA requirements."
+        ]
+      },
+      {
+        "title": "Changes to This Policy",
+        "content": [
+          "We may update this Privacy Policy to reflect changes in laws or how we process data. The most recent version will always be available on our website."
+        ]
+      }
+    ]
+  }
+}

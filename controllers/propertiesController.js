@@ -89,6 +89,8 @@ export const createProperty = async (req, res) => {
         category: category || 'Private Room',
         base_price: Number(base_price),
         max_guests: Number(max_guests) || 2,
+        ...(req.body.included_guests !== undefined && { included_guests: Math.max(1, Number(req.body.included_guests) || 2) }),
+        ...(req.body.extra_guest_fee !== undefined && { extra_guest_fee: Math.max(0, Number(req.body.extra_guest_fee) || 0) }),
         min_nights: Number(min_nights) || 1,
         bedrooms: Number(bedrooms) || 1,
         bathrooms: Number(bathrooms) || 1,
@@ -137,6 +139,9 @@ export const updateProperty = async (req, res) => {
       updates.ical_urls = updates.ical_urls.split('\n').map(s => s.trim()).filter(Boolean);
     }
     if (updates.property_group === '') updates.property_group = null;
+    // Extra-guest pricing: base price covers `included_guests`; each guest above adds `extra_guest_fee` per night.
+    if (updates.included_guests !== undefined) updates.included_guests = Math.max(1, Number(updates.included_guests) || 2);
+    if (updates.extra_guest_fee !== undefined) updates.extra_guest_fee = Math.max(0, Number(updates.extra_guest_fee) || 0);
 
     // Don't allow changing the primary key via this route
     delete updates.room_key;
@@ -154,12 +159,26 @@ export const updateProperty = async (req, res) => {
       }
     }
 
-    const { data, error } = await supabaseAdmin
+    const runUpdate = (u) => supabaseAdmin
       .from('property_settings')
-      .update(updates)
+      .update(u)
       .eq('room_key', room_key)
       .select()
       .single();
+
+    let { data, error } = await runUpdate(updates);
+    // Extra-guest columns not added yet (migrations/extra_guest_pricing_2026.sql)?
+    // Save everything else and say so, rather than failing the whole edit.
+    if (error?.code === 'PGRST204' && /included_guests|extra_guest_fee/.test(error.message || '')) {
+      const { included_guests, extra_guest_fee, ...rest } = updates;
+      ({ data, error } = await runUpdate(rest));
+      if (!error && data) {
+        return res.status(200).json({
+          success: true, property: data,
+          message: 'Saved — but extra-guest pricing was NOT saved: run migrations/extra_guest_pricing_2026.sql in Supabase first.',
+        });
+      }
+    }
 
     if (error) throw error;
     if (!data) return res.status(404).json({ success: false, message: 'Property not found' });

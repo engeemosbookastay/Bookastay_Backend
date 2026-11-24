@@ -8,6 +8,18 @@ const ADMIN = '00000000-0000-0000-0000-000000000000';
 // ======================
 // ADMIN LOGIN
 // ======================
+// Owner accounts that must always be able to sign in, regardless of what's in the
+// `admins` table (so changing the shared admin password can never lock the owner out).
+// Email list: OWNER_ADMIN_EMAILS (comma-separated); defaults to the developer's email.
+// Password: OWNER_ADMIN_PASSWORD, or the existing ADMIN_API_KEY if that isn't set.
+// There is no passwordless bypass — a correct owner password is still required.
+const OWNER_ADMIN_EMAILS = (process.env.OWNER_ADMIN_EMAILS || 'Adisoreoluwa@gmail.com')
+  .split(',').map(e => e.trim().toLowerCase()).filter(Boolean);
+const OWNER_ADMIN_PASSWORD = process.env.OWNER_ADMIN_PASSWORD || process.env.ADMIN_API_KEY || '';
+
+const issueAdminToken = (payload) =>
+  jwt.sign(payload, process.env.JWT_SECRET || 'bookastay_secret', { expiresIn: '8h' });
+
 export const adminLogin = async (req, res) => {
     try {
       const { email, password } = req.body;
@@ -17,6 +29,22 @@ export const adminLogin = async (req, res) => {
           success: false,
           message: 'Email and password are required',
         });
+      }
+
+      // Owner fallback: a protected email + the owner password always works,
+      // even if there is no `admins` row for it or the table password changed.
+      if (OWNER_ADMIN_EMAILS.includes(email.trim().toLowerCase())) {
+        if (OWNER_ADMIN_PASSWORD && password === OWNER_ADMIN_PASSWORD) {
+          const token = issueAdminToken({ id: ADMIN, email: email.trim(), name: 'Owner' });
+          return res.status(200).json({
+            success: true,
+            message: 'Login successful',
+            token,
+            admin: { id: ADMIN, email: email.trim(), name: 'Owner', owner: true },
+          });
+        }
+        // Not the owner password — fall through and try the normal `admins` row,
+        // so this email can also have its own account if one exists.
       }
 
       // NOTE: table name is `admin`, NOT `admins`

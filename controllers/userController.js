@@ -38,7 +38,7 @@ export const signup = async (req, res) => {
       email: inserted.email,
     };
 
-    // ✅ Make sure frontend gets the structure it expects
+    // Make sure frontend gets the structure it expects
     return res.status(201).json({
       message: "User created successfully",
       data: { user: safeUser },
@@ -78,7 +78,7 @@ export const login = async (req, res) => {
       email: user.email,
     };
 
-    // ✅ Consistent structure for frontend
+    // Consistent structure for frontend
     return res.json({
       message: "Login successful",
       data: { user: safeUser },

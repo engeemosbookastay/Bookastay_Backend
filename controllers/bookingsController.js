@@ -27,7 +27,7 @@ const getPropertyPrice = async (room_type) => {
     try {
         const { data } = await supabaseAdmin
             .from('property_settings')
-            .select('base_price, min_nights, max_guests')
+            .select('*')
             .eq('room_key', room_type || 'entire')
             .single();
         return data || null;
@@ -68,7 +68,7 @@ const transporter = nodemailer.createTransport({
     socketTimeout: 15000,
 });
 
-// ✅ VERIFY EMAIL CONNECTION ON STARTUP (IMPORTANT!)
+// VERIFY EMAIL CONNECTION ON STARTUP (IMPORTANT!)
 transporter.verify((error, success) => {
     if (error) {
         console.error('❌ EMAIL CONFIGURATION ERROR:', error.message);
@@ -188,13 +188,13 @@ const generateCustomerEmailHTML = (bookingData) => {
     <body>
         <div class="container">
             <div class="header">
-                <h1>🏠 Engeemos Bookastay</h1>
+                <h1>Engeemos Bookastay</h1>
                 <p>...hosting temporary stay in exotic style</p>
             </div>
             
             <div class="content">
                 <div class="greeting">
-                    Hello ${bookingData.name}! 👋
+                    Hello ${bookingData.name},
                 </div>
                 
                 <div class="message">
@@ -203,7 +203,7 @@ const generateCustomerEmailHTML = (bookingData) => {
                 </div>
                 
                 <div class="booking-card">
-                    <h2 style="margin-top: 0; color: #667eea;">📋 Booking Details</h2>
+                    <h2 style="margin-top: 0; color: #667eea;">Booking Details</h2>
                     
                     <div class="booking-detail">
                         <span class="detail-label">Booking ID:</span>
@@ -234,12 +234,12 @@ const generateCustomerEmailHTML = (bookingData) => {
                 <div class="total-box">
                     <div style="font-size: 14px; opacity: 0.9;">Total Amount Paid</div>
                     <div class="amount">₦${Number(bookingData.price).toLocaleString()}</div>
-                    <div style="font-size: 12px; opacity: 0.8; margin-top: 5px;">✓ Payment Confirmed</div>
+                    <div style="font-size: 12px; opacity: 0.8; margin-top: 5px;">Payment Confirmed</div>
                 </div>
                 
                 ${bookingData.verification_url ? `
                 <div style="background: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%); padding: 25px; border-radius: 8px; margin: 25px 0; text-align: center; color: #ffffff;">
-                    <h2 style="margin: 0 0 15px 0; color: #ffffff; font-size: 20px;">🔐 Identity Verification Required</h2>
+                    <h2 style="margin: 0 0 15px 0; color: #ffffff; font-size: 20px;">Identity Verification Required</h2>
                     <p style="margin: 0 0 20px 0; font-size: 14px; opacity: 0.95;">
                         To complete your booking, please verify your identity. This is a quick and secure process.
                     </p>
@@ -248,13 +248,13 @@ const generateCustomerEmailHTML = (bookingData) => {
                         Complete Verification Now
                     </a>
                     <p style="margin: 15px 0 0 0; font-size: 12px; opacity: 0.85;">
-                        ⏱️ Verification takes less than 2 minutes
+                        Verification takes less than 2 minutes
                     </p>
                 </div>
                 ` : ''}
 
                 <div class="highlight">
-                    <strong>📍 Important Information:</strong><br>
+                    <strong>Important Information:</strong><br>
                     • Check-in time: 2:00 PM<br>
                     • Check-out time: 12:00 PM<br>
                     • Please bring a valid ID for verification<br>
@@ -262,7 +262,7 @@ const generateCustomerEmailHTML = (bookingData) => {
                 </div>
 
                 <div class="policy-box">
-                    <h3>📜 Cancellation Policy</h3>
+                    <h3>Cancellation Policy</h3>
                     <ul>
                         <li>
                             <strong>Bookings made 1 week to check-in date:</strong><br>
@@ -278,7 +278,7 @@ const generateCustomerEmailHTML = (bookingData) => {
                         </li>
                     </ul>
                     <div class="policy-note">
-                        <strong>⚠️ Please Note:</strong> Same-day cancellations, no-shows, early check-outs or unused nights are non-refundable. See our website for the full Cancellation Policy.
+                        <strong>Please Note:</strong> Same-day cancellations, no-shows, early check-outs or unused nights are non-refundable. See our website for the full Cancellation Policy.
                     </div>
                 </div>
 
@@ -295,8 +295,8 @@ const generateCustomerEmailHTML = (bookingData) => {
                 </div>
                 
                 <div style="margin: 20px 0;">
-                    <a href="tel:+2348166939592" style="color: #ffffff; text-decoration: none; margin: 0 10px;">📞 +234 816 693 9592</a> | 
-                    <a href="mailto:${process.env.EMAIL_USER}" style="color: #ffffff; text-decoration: none; margin: 0 10px;">✉️ ${process.env.EMAIL_USER}</a>
+                    <a href="tel:+2348166939592" style="color: #ffffff; text-decoration: none; margin: 0 10px;">Phone: +234 816 693 9592</a> | 
+                    <a href="mailto:${process.env.EMAIL_USER}" style="color: #ffffff; text-decoration: none; margin: 0 10px;">Email: ${process.env.EMAIL_USER}</a>
                 </div>
                 
                 <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #555555;">
@@ -347,13 +347,13 @@ const generateClientEmailHTML = (bookingData) => {
     <body>
         <div class="container">
             <div class="header">
-                <h1>🎉 New Booking Alert!</h1>
+                <h1>New Booking Alert</h1>
                 <p style="color: #e0e0e0; margin: 10px 0;">Engeemos Bookastay Management</p>
             </div>
             
             <div class="content">
                 <div class="alert-box">
-                    <h2 style="margin-top: 0; color: #2ecc71;">✓ Booking Confirmed & Paid</h2>
+                    <h2 style="margin-top: 0; color: #2ecc71;">Booking Confirmed &amp; Paid</h2>
                     <p style="margin: 0; color: #666666;">You have a new confirmed booking with payment received.</p>
                 </div>
                 
@@ -406,13 +406,13 @@ const generateClientEmailHTML = (bookingData) => {
                 </div>
                 
                 <div class="revenue-box">
-                    <div style="font-size: 14px; opacity: 0.9;">💰 Revenue Received</div>
+                    <div style="font-size: 14px; opacity: 0.9;">Revenue Received</div>
                     <div class="amount">₦${Number(bookingData.price).toLocaleString()}</div>
-                    <div style="font-size: 12px; opacity: 0.8; margin-top: 5px;">Payment Status: CONFIRMED ✓</div>
+                    <div style="font-size: 12px; opacity: 0.8; margin-top: 5px;">Payment Status: CONFIRMED</div>
                 </div>
                 
                 <div style="background-color: #fff9e6; padding: 20px; border-radius: 8px; border: 2px dashed #ffc107;">
-                    <strong style="color: #ff6b6b;">📋 Action Required:</strong><br>
+                    <strong style="color: #ff6b6b;">Action Required:</strong><br>
                     <ul style="margin: 10px 0; padding-left: 20px; color: #666666;">
                         <li>Prepare the ${bookingData.room_type === 'entire' ? 'entire apartment' : 'room'} for arrival</li>
                         <li>Verify guest ID upon check-in</li>
@@ -439,7 +439,7 @@ const sendCustomerEmail = async (toEmail, bookingData, pdfPath) => {
     const mailOptions = {
         from: `"Engeemos Bookastay" <${process.env.EMAIL_USER}>`,
         to: toEmail,
-        subject: '🎉 Booking Confirmed - Engeemos Bookastay',
+        subject: 'Booking Confirmed - Engeemos Bookastay',
         html: generateCustomerEmailHTML(bookingData),
         attachments: pdfPath && fs.existsSync(pdfPath) ? [{
             filename: `Booking_Receipt_${bookingData.transaction_ref}.pdf`,
@@ -470,7 +470,7 @@ const sendClientNotification = async (bookingData, pdfPath) => {
     const mailOptions = {
         from: `"Engeemos Bookastay System" <${process.env.EMAIL_USER}>`,
         to: recipients,
-        subject: `🎉 New Booking: ${bookingData.name} - ₦${Number(bookingData.price).toLocaleString()}`,
+        subject: `New Booking: ${bookingData.name} - ₦${Number(bookingData.price).toLocaleString()}`,
         html: generateClientEmailHTML(bookingData),
         attachments: pdfPath && fs.existsSync(pdfPath) ? [{
             filename: `Booking_Receipt_${bookingData.transaction_ref}.pdf`,
@@ -497,7 +497,7 @@ const alertPaidBookingFailed = async (body, paymentRef, paidAmount, reason) => {
     const row = (k, v) => `<tr><td style="padding:6px 12px;color:#555;">${k}</td><td style="padding:6px 12px;"><strong>${esc(v)}</strong></td></tr>`;
     const html = `
         <div style="font-family:Arial,sans-serif;max-width:560px;">
-          <h2 style="color:#b91c1c;">⚠️ Payment received but booking NOT saved</h2>
+          <h2 style="color:#b91c1c;">Payment received but booking NOT saved</h2>
           <p>A guest paid on the website, but the booking could not be completed. Please contact the guest to confirm their stay or arrange a refund.</p>
           <p><strong>Reason:</strong> ${reason}</p>
           <table style="border-collapse:collapse;background:#f9fafb;">
@@ -516,7 +516,7 @@ const alertPaidBookingFailed = async (body, paymentRef, paidAmount, reason) => {
         await deliverEmail(transporter, {
             from: `"Engeemos Bookastay System" <${process.env.EMAIL_USER}>`,
             to: recipients,
-            subject: `⚠️ ACTION NEEDED: ${body.name || 'Guest'} paid ₦${Number(paidAmount || 0).toLocaleString()} but booking failed`,
+            subject: `ACTION NEEDED: ${body.name || 'Guest'} paid ₦${Number(paidAmount || 0).toLocaleString()} but booking failed`,
             html,
         });
         console.log('📧 Paid-but-failed alert sent to:', recipients.join(', '));
@@ -796,8 +796,13 @@ export const createBooking = async (req, res) => {
             return res.status(409).json({ success: false, message: overlapCheck.message, blocking: overlapCheck.blocking });
         }
 
-        const base_price = requestedRoom.toLowerCase() === 'entire' ? PRICE_ENTIRE_APARTMENT : PRICE_SINGLE_ROOM;
-        const extraGuestFee = guests > 2 ? (guests - 2) * EXTRA_GUEST_PER_NIGHT * nights : 0;
+        // Price + extra-guest rule come from the admin's property settings; the
+        // constants are only used if the apartment's settings can't be read.
+        const settings = await getPropertyPrice(requestedRoom);
+        const base_price = Number(settings?.base_price) || (requestedRoom.toLowerCase() === 'entire' ? PRICE_ENTIRE_APARTMENT : PRICE_SINGLE_ROOM);
+        const includedGuests = Number(settings?.included_guests) || 2;
+        const feePerGuest = settings ? Number(settings.extra_guest_fee) || 0 : EXTRA_GUEST_PER_NIGHT;
+        const extraGuestFee = Math.max(0, (Number(guests) || 1) - includedGuests) * feePerGuest * nights;
         const total = base_price * nights + CLEANING_FEE + SERVICE_FEE + extraGuestFee;
 
         const bookingData = {

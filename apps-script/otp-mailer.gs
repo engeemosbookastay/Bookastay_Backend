@@ -21,7 +21,7 @@
  *   4.  Change SHARED_SECRET below to your own long random text (see the line).
  *       Keep a copy — you must give the SAME value to the backend (step 8).
  *   5.  Click  Deploy ▸ New deployment.
- *   6.  Click the gear ⚙ next to "Select type" ▸ choose  Web app.
+ *   6.  Click the gear icon next to "Select type" ▸ choose  Web app.
  *   7.  Set:
  *          Description:      BookAStay OTP mailer
  *          Execute as:       Me  (your email)
@@ -44,7 +44,7 @@
  *   The /exec URL stays the same, so you do NOT need to update the backend.
  ************************************************************************************/
 
-// ⬇️  CHANGE THIS to your own long random string, then give the same value to the
+// CHANGE THIS to your own long random string, then give the same value to the
 //     backend as OTP_MAILER_SECRET. It stops strangers who find the URL from
 //     using it to send email. (You can also set a Script Property named
 //     OTP_MAILER_SECRET instead of editing this line — that takes priority.)
@@ -57,7 +57,7 @@ var SENDER_NAME = 'BookAStay';   // display name recipients see in the "From" fi
 //   (e.g. engeemosbookastay@gmail.com if you deploy under that account).
 //   To send from a custom address like engeemosbookastay@bookastayng.com, that
 //   address must FIRST be added and verified in this same account under
-//   Gmail ▸ ⚙ Settings ▸ Accounts and Import ▸ "Send mail as". If it is not a
+//   Gmail ▸ Settings ▸ Accounts and Import ▸ "Send mail as". If it is not a
 //   verified alias, we automatically fall back to the account's own address so
 //   the code is never lost.
 var SENDER_EMAIL = 'engeemosbookastay@bookastayng.com';
